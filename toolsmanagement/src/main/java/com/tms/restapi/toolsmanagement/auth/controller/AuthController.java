@@ -6,6 +6,8 @@ import com.tms.restapi.toolsmanagement.superadmin.service.SuperAdminService;
 import com.tms.restapi.toolsmanagement.admin.model.Admin;
 import com.tms.restapi.toolsmanagement.admin.repository.AdminRepository;
 import com.tms.restapi.toolsmanagement.superadmin.model.SuperAdmin;
+import com.tms.restapi.toolsmanagement.security.model.Security;
+import com.tms.restapi.toolsmanagement.security.repository.SecurityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,6 +26,9 @@ public class AuthController {
 
     @Autowired
     private TrainerRepository trainerRepository;
+
+    @Autowired
+    private SecurityRepository securityRepository;
 
     @Autowired
     private SuperAdminService superAdminService;
@@ -67,6 +72,20 @@ public class AuthController {
             trainer.setPassword(null);
             response.put("message", "Trainer login successful");
             response.put("user", trainer);
+            return ResponseEntity.ok(response);
+        }
+
+        // Security login
+        if (role.equalsIgnoreCase("security")) {
+            Security security = securityRepository.findByEmail(email);
+
+            if (security == null || !passwordEncoder.matches(password, security.getPassword())) {
+                return ResponseEntity.status(401).body(Map.of("message", "Invalid security credentials"));
+            }
+
+            security.setPassword(null);
+            response.put("message", "Security login successful");
+            response.put("user", security);
             return ResponseEntity.ok(response);
         }
 

@@ -3,6 +3,7 @@ package com.tms.restapi.toolsmanagement.auth.controller;
 import com.tms.restapi.toolsmanagement.trainer.service.TrainerService;
 import com.tms.restapi.toolsmanagement.superadmin.service.SuperAdminService;
 import com.tms.restapi.toolsmanagement.admin.service.AdminService;
+import com.tms.restapi.toolsmanagement.security.service.SecurityService;
 import com.tms.restapi.toolsmanagement.auth.dto.ResetPasswordRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,9 @@ public class ResetPasswordController {
 
     @Autowired
     private SuperAdminService superAdminService;
+
+    @Autowired
+    private SecurityService securityService;
 
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
@@ -46,12 +50,16 @@ public class ResetPasswordController {
                     trainerService.resetPassword(request.getEmail(), request.getNewPassword());
                     break;
 
+                case "SECURITY":
+                    securityService.resetPassword(request.getEmail(), request.getNewPassword());
+                    break;
+
                 case "SUPERADMIN":
                     superAdminService.resetPassword(request.getEmail(), request.getNewPassword());
                     break;
 
                 default:
-                    return ResponseEntity.badRequest().body("Invalid role. Use ADMIN, TRAINER or SUPERADMIN");
+                    return ResponseEntity.badRequest().body("Invalid role. Use ADMIN, TRAINER, SECURITY or SUPERADMIN");
             }
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
