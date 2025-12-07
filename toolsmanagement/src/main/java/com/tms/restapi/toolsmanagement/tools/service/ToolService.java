@@ -1,14 +1,11 @@
 package com.tms.restapi.toolsmanagement.tools.service;
 
-import com.google.zxing.WriterException;
 import com.tms.restapi.toolsmanagement.tools.model.Tool;
-import com.tms.restapi.toolsmanagement.tools.model.Tool.Location;
 import com.tms.restapi.toolsmanagement.tools.repository.ToolRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,32 +15,44 @@ public class ToolService {
     @Autowired
     private ToolRepository toolRepository;
 
-    public Tool createTool(Tool tool, String adminLocation) throws IOException, WriterException {
-        // Force tool’s location to match admin’s location
-        try {
-            tool.setLocation(Location.valueOf(adminLocation));
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid location. Allowed values: Pune, Bangalore, NCR");
+    // Helper: set next calibration date
+    private void updateNextCalibrationDate(Tool tool) {
+        if (tool.isCalibrationRequired()
+                && tool.getLastCalibrationDate() != null
+                && tool.getCalibrationPeriodMonths() != null) {
+
+            LocalDate next = tool.getLastCalibrationDate()
+                    .plusMonths(tool.getCalibrationPeriodMonths());
+            tool.setNextCalibrationDate(next);
+        } else {
+            // If not required, or missing data, clear nextCalibrationDate
+            tool.setNextCalibrationDate(null);
+
+            if (!tool.isCalibrationRequired()) {
+                // Calibration not required, we also clear these
+                tool.setCalibrationPeriodMonths(null);
+                tool.setLastCalibrationDate(null);
+            }
         }
+    }
 
-        // Save to get ID
-        Tool savedTool = toolRepository.save(tool);
+    // Create tool (location from adminLocation, availability = quantity initially)
+    public Tool createTool(Tool tool, String adminLocation) {
+        tool.setId(null); // new entity
 
-        // Prepare QR content
-        // String qrContent = "Tool ID: " + savedTool.getId() +
-        //         "\nTool No: " + savedTool.getToolNo() +
-        //         "\nDescription: " + savedTool.getDescription() +
-        //         "\nLocation: " + savedTool.getLocation() +
-        //         "\nStatus: " + savedTool.getStatus() +
-        //         "\nQuantity: " + savedTool.getQuantity() +
-        //         "\nCalibration Date: " + savedTool.getCalibrationDate();
+        // Force location from admin
+        tool.setLocation(adminLocation);
 
-        // // Generate QR Code
-        // String qrFileName = "tool_" + savedTool.getId();
-        // String qrPath = QRCodeGenerator.generateQRCode(qrContent, qrFileName);
+        // availability is remaining quantity; at start all are available
+        tool.setAvailability(tool.getQuantity());
 
-        // savedTool.setQrCodePath(qrPath);
-        return toolRepository.save(savedTool);
+        // lastBorrowedBy starts as null
+        tool.setLastBorrowedBy(null);
+
+        // calibration logic
+        updateNextCalibrationDate(tool);
+
+        return toolRepository.save(tool);
     }
 
     public List<Tool> getAllTools() {
@@ -51,52 +60,72 @@ public class ToolService {
     }
 
     public List<Tool> getToolsByLocation(String location) {
-        try {
-            Location loc = Location.valueOf(location);
-            return toolRepository.findByLocation(loc);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid location. Allowed values: Pune, Bangalore, NCR");
-        }
+        return toolRepository.findByLocation(location);
     }
 
     public Optional<Tool> getToolById(Long id) {
         return toolRepository.findById(id);
     }
 
-    public List<Tool> searchByToolNoOrDescription(String keyword) {
-        List<Tool> byToolNo = toolRepository.findByToolNoContainingIgnoreCase(keyword);
-        List<Tool> byDesc = toolRepository.findByDescriptionContainingIgnoreCase(keyword);
-
-        // Merge results without duplicates
-        List<Tool> merged = new ArrayList<>(byToolNo);
-        for (Tool t : byDesc) {
-            if (!merged.contains(t)) {
-                merged.add(t);
-            }
-        }
-        return merged;
-    }
-
     public Tool updateTool(Long id, Tool toolDetails) {
-        return toolRepository.findById(id).map(tool -> {
-            tool.setToolNo(toolDetails.getToolNo());
-            tool.setDescription(toolDetails.getDescription());
-            tool.setToolLocation(toolDetails.getToolLocation());
-            tool.setQuantity(toolDetails.getQuantity());
-            tool.setStatus(toolDetails.getStatus());
-            tool.setCalibrationRequired(toolDetails.isCalibrationRequired());
-            tool.setCalibrationDate(toolDetails.getCalibrationDate());
-            tool.setRemarks(toolDetails.getRemarks());
-            return toolRepository.save(tool);
-        }).orElse(null);
+        Optional<Tool> existingOpt = toolRepository.findById(id);
+        if (existingOpt.isEmpty()) {
+            return null;
+        }
+
+        Tool tool = existingOpt.get();
+
+        // Fields allowed to update from form
+        tool.setDescription(toolDetails.getDescription());
+        tool.setSiNo(toolDetails.getSiNo());
+        tool.setToolNo(toolDetails.getToolNo());
+        tool.setToolLocation(toolDetails.getToolLocation());
+        tool.setCondition(toolDetails.getCondition());
+        tool.setRemark(toolDetails.getRemark());
+
+        // Fixed quantity can be updated by admin
+        tool.setQuantity(toolDetails.getQuantity());
+
+        // Do NOT change availability here (this will be handled by issuance)
+        // Do NOT change location from frontend
+        // Do NOT overwrite lastBorrowedBy (issuance will update it)
+
+        // Calibration fields from form
+        tool.setCalibrationRequired(toolDetails.isCalibrationRequired());
+        tool.setCalibrationPeriodMonths(toolDetails.getCalibrationPeriodMonths());
+        tool.setLastCalibrationDate(toolDetails.getLastCalibrationDate());
+
+        updateNextCalibrationDate(tool);
+
+        return toolRepository.save(tool);
     }
 
     public String deleteTool(Long id) {
-        if (toolRepository.existsById(id)) {
-            toolRepository.deleteById(id);
-            return "Tool deleted successfully.";
-        } else {
+        if (!toolRepository.existsById(id)) {
             return "Tool not found.";
         }
+        toolRepository.deleteById(id);
+        return "Tool deleted successfully.";
+    }
+
+    public List<Tool> searchTools(String keyword) {
+        return toolRepository
+                .findByDescriptionContainingIgnoreCaseOrToolNoContainingIgnoreCase(keyword, keyword);
+    }
+
+    // Issuance logic can use this to update remaining quantity and lastBorrowedBy
+    public Tool updateToolAfterIssuance(Long toolId, int newAvailability, String lastBorrowedBy) {
+        Optional<Tool> existingOpt = toolRepository.findById(toolId);
+        if (existingOpt.isEmpty()) {
+            return null;
+        }
+
+        Tool tool = existingOpt.get();
+
+        // Remaining quantity after this issuance/return
+        tool.setAvailability(newAvailability);
+        tool.setLastBorrowedBy(lastBorrowedBy);
+
+        return toolRepository.save(tool);
     }
 }

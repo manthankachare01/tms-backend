@@ -1,7 +1,7 @@
 package com.tms.restapi.toolsmanagement.tools.model;
 
 import jakarta.persistence.*;
-import java.sql.Timestamp;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "tools")
@@ -11,70 +11,178 @@ public class Tool {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    private Location location;
-
-    private int slNo;
-    private String toolNo;
+    // Basic details
+    @Column(nullable = false)
     private String description;
+
+    @Column(name = "si_no", nullable = false)
+    private String siNo;
+
+    @Column(name = "tool_no", nullable = false)
+    private String toolNo;
+
+    // Physical location of the tool (rack, cupboard, etc.)
+    @Column(name = "tool_location")
     private String toolLocation;
-    private int quantity;
 
-    @Enumerated(EnumType.STRING)
-    private Status status = Status.Good;
+    // Plant location (Pune, etc.), forced from adminLocation
+    @Column(name = "location", nullable = false)
+    private String location;
 
+    // Fixed total quantity for that tool
+    @Column(nullable = false)
+    private Integer quantity;
+
+    // Remaining quantity (availability count)
+    // 0 -> not available, >0 -> available
+    @Column(nullable = false)
+    private Integer availability;
+
+    // Condition of tool (Good, Damaged, etc.)
+    @Column(name = "tool_condition")
+    private String condition;
+
+    // Calibration
+    @Column(name = "calibration_required", nullable = false)
     private boolean calibrationRequired;
-    private String calibrationDate;
-    private String remarks;
 
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
+    // Example: number of months between calibrations
+    @Column(name = "calibration_period_months")
+    private Integer calibrationPeriodMonths;
 
-    private String qrCodePath;
+    @Column(name = "last_calibration_date")
+    private LocalDate lastCalibrationDate;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = new Timestamp(System.currentTimeMillis());
-        updatedAt = new Timestamp(System.currentTimeMillis());
-    }
+    @Column(name = "next_calibration_date")
+    private LocalDate nextCalibrationDate;
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = new Timestamp(System.currentTimeMillis());
-    }
+    // Other info
+    private String remark;
+
+    @Column(name = "last_borrowed_by")
+    private String lastBorrowedBy;
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public Location getLocation() { return location; }
-    public void setLocation(Location location) { this.location = location; }
-    public int getSlNo() { return slNo; }
-    public void setSlNo(int slNo) { this.slNo = slNo; }
-    public String getToolNo() { return toolNo; }
-    public void setToolNo(String toolNo) { this.toolNo = toolNo; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public String getToolLocation() { return toolLocation; }
-    public void setToolLocation(String toolLocation) { this.toolLocation = toolLocation; }
-    public int getQuantity() { return quantity; }
-    public void setQuantity(int quantity) { this.quantity = quantity; }
-    public Status getStatus() { return status; }
-    public void setStatus(Status status) { this.status = status; }
-    public boolean isCalibrationRequired() { return calibrationRequired; }
-    public void setCalibrationRequired(boolean calibrationRequired) { this.calibrationRequired = calibrationRequired; }
-    public String getCalibrationDate() { return calibrationDate; }
-    public void setCalibrationDate(String calibrationDate) { this.calibrationDate = calibrationDate; }
-    public String getRemarks() { return remarks; }
-    public void setRemarks(String remarks) { this.remarks = remarks; }
-    public Timestamp getCreatedAt() { return createdAt; }
-    public Timestamp getUpdatedAt() { return updatedAt; }
-    public String getQrCodePath() { return qrCodePath; }
-    public void setQrCodePath(String qrCodePath) { this.qrCodePath = qrCodePath; }
 
-    public enum Location {
-        Pune, Bangalore, NCR
+    public Long getId() {
+        return id;
     }
 
-    public enum Status {
-        Good, Damaged, Missing, Obsolete
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getSiNo() {
+        return siNo;
+    }
+
+    public void setSiNo(String siNo) {
+        this.siNo = siNo;
+    }
+
+    public String getToolNo() {
+        return toolNo;
+    }
+
+    public void setToolNo(String toolNo) {
+        this.toolNo = toolNo;
+    }
+
+    public String getToolLocation() {
+        return toolLocation;
+    }
+
+    public void setToolLocation(String toolLocation) {
+        this.toolLocation = toolLocation;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    // fixed quantity
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    // remaining quantity
+    public Integer getAvailability() {
+        return availability;
+    }
+
+    public void setAvailability(Integer availability) {
+        this.availability = availability;
+    }
+
+    public String getCondition() {
+        return condition;
+    }
+
+    public void setCondition(String condition) {
+        this.condition = condition;
+    }
+
+    public boolean isCalibrationRequired() {
+        return calibrationRequired;
+    }
+
+    public void setCalibrationRequired(boolean calibrationRequired) {
+        this.calibrationRequired = calibrationRequired;
+    }
+
+    public Integer getCalibrationPeriodMonths() {
+        return calibrationPeriodMonths;
+    }
+
+    public void setCalibrationPeriodMonths(Integer calibrationPeriodMonths) {
+        this.calibrationPeriodMonths = calibrationPeriodMonths;
+    }
+
+    public LocalDate getLastCalibrationDate() {
+        return lastCalibrationDate;
+    }
+
+    public void setLastCalibrationDate(LocalDate lastCalibrationDate) {
+        this.lastCalibrationDate = lastCalibrationDate;
+    }
+
+    public LocalDate getNextCalibrationDate() {
+        return nextCalibrationDate;
+    }
+
+    public void setNextCalibrationDate(LocalDate nextCalibrationDate) {
+        this.nextCalibrationDate = nextCalibrationDate;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public String getLastBorrowedBy() {
+        return lastBorrowedBy;
+    }
+
+    public void setLastBorrowedBy(String lastBorrowedBy) {
+        this.lastBorrowedBy = lastBorrowedBy;
     }
 }
