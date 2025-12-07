@@ -8,7 +8,13 @@ import java.util.List;
 
 @Repository
 public interface TrainerRepository extends JpaRepository<Trainer, Long> {
+
     Trainer findByEmail(String email);
+
     List<Trainer> findByLocation(String location);
-    List<Trainer> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email);
+
+    List<Trainer> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+            String name,
+            String email
+    );
 }

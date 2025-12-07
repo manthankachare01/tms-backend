@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// Example: /api/trainers?adminLocation=Pune
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/trainers")
@@ -19,64 +18,84 @@ public class TrainerController {
     @Autowired
     private TrainerService trainerService;
 
-    // Admin creates trainer (restricted by admin location)
+    // 1) Create trainer (location from adminLocation, not from form)
+    // POST: /api/trainers/create?adminLocation=Pune
     @PostMapping("/create")
-    public Trainer createTrainer(@RequestParam String adminLocation, @RequestBody Trainer trainer) {
-        return trainerService.createTrainer(trainer, adminLocation);
+    public ResponseEntity<Trainer> createTrainer(
+            @RequestParam String adminLocation,
+            @RequestBody Trainer trainer
+    ) {
+        Trainer created = trainerService.createTrainer(trainer, adminLocation);
+        // do not send password back
+        created.setPassword(null);
+        return ResponseEntity.ok(created);
     }
 
-    // Fetch all trainers for admin’s location
+    // 2) Get all trainers
+    // GET: /api/trainers/all
     @GetMapping("/all")
-    public List<Trainer> getAllTrainers(@RequestParam String adminLocation) {
-        return trainerService.getAllTrainersByLocation(adminLocation);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Trainer> getTrainerById(@PathVariable Long id) {
-        return trainerService.getTrainerById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PutMapping("/update/{id}")
-    public ResponseEntity<Trainer> updateTrainer(@PathVariable Long id, @RequestBody Trainer trainerDetails) {
-        Trainer updated = trainerService.updateTrainer(id, trainerDetails);
-        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<Trainer>> searchTrainers(@RequestParam String keyword) {
-        List<Trainer> trainers = trainerService.searchTrainers(keyword);
+    public ResponseEntity<List<Trainer>> getAllTrainers() {
+        List<Trainer> trainers = trainerService.getAllTrainers();
+        trainers.forEach(t -> t.setPassword(null));
         return ResponseEntity.ok(trainers);
     }
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteTrainer(@PathVariable Long id) {
-        return ResponseEntity.ok(trainerService.deleteTrainer(id));
+    // 3) Get trainers by location
+    // GET: /api/trainers/by-location?location=Pune
+    @GetMapping("/by-location")
+    public ResponseEntity<List<Trainer>> getTrainersByLocation(
+            @RequestParam String location
+    ) {
+        List<Trainer> trainers = trainerService.getAllTrainersByLocation(location);
+        trainers.forEach(t -> t.setPassword(null));
+        return ResponseEntity.ok(trainers);
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> loginTrainer(@RequestBody Trainer loginRequest) {
-        Trainer trainer = trainerService.findByEmail(loginRequest.getEmail());
-        if (trainer == null) {
-            return ResponseEntity.status(404).body("{\"message\": \"Trainer not found\"}");
+    // 4) Get trainer by id
+    // GET: /api/trainers/{id}
+    @GetMapping("/{id}")
+    public ResponseEntity<Trainer> getTrainerById(@PathVariable Long id) {
+        return trainerService.getTrainerById(id)
+                .map(trainer -> {
+                    trainer.setPassword(null);
+                    return ResponseEntity.ok(trainer);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // 5) Update trainer by id
+    // PUT: /api/trainers/update/{id}
+    @PutMapping("/update/{id}")
+    public ResponseEntity<Trainer> updateTrainer(
+            @PathVariable Long id,
+            @RequestBody Trainer trainerDetails
+    ) {
+        Trainer updated = trainerService.updateTrainer(id, trainerDetails);
+        if (updated == null) {
+            return ResponseEntity.notFound().build();
         }
+        updated.setPassword(null);
+        return ResponseEntity.ok(updated);
+    }
 
-        boolean passwordMatch = trainerService.verifyPassword(loginRequest.getPassword(), trainer.getPassword());
-        if (!passwordMatch) {
-            return ResponseEntity.status(401).body("{\"message\": \"Invalid password\"}");
-        }
-
-        // Create clean response without password
-        trainer.setPassword(null);
-
-        // Build a structured response
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Login successful");
-        response.put("user", trainer);
-
+    // 6) Delete trainer by id
+    // DELETE: /api/trainers/delete/{id}
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Map<String, String>> deleteTrainer(
+            @PathVariable Long id
+    ) {
+        String msg = trainerService.deleteTrainer(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", msg);
         return ResponseEntity.ok(response);
     }
 
-
+    // optional: search
+    // GET: /api/trainers/search?keyword=rahul
+    @GetMapping("/search")
+    public ResponseEntity<List<Trainer>> searchTrainers(@RequestParam String keyword) {
+        List<Trainer> trainers = trainerService.searchTrainers(keyword);
+        trainers.forEach(t -> t.setPassword(null));
+        return ResponseEntity.ok(trainers);
+    }
 }

@@ -9,22 +9,31 @@ public class Trainer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id;   // auto-generated and unique
 
     private String name;
-    private String email;
-    private String contact;
-    private String location;
     private String role;
-    private String shift;
+    private String contact;
     private String status;
     private LocalDate dob;
     private LocalDate doj;
+
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
+
     private String password;
+
+    // location will be forced from adminLocation, not from form
+    private String location;
+
+    // counters / stats
     private int toolsIssued;
     private int toolsReturned;
+    private int activeIssuance;
+    private int overdueIssuance;
 
     // Getters and Setters
+
     public Long getId() {
         return id;
     }
@@ -41,30 +50,6 @@ public class Trainer {
         this.name = name;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getContact() {
-        return contact;
-    }
-
-    public void setContact(String contact) {
-        this.contact = contact;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
     public String getRole() {
         return role;
     }
@@ -73,12 +58,12 @@ public class Trainer {
         this.role = role;
     }
 
-    public String getShift() {
-        return shift;
+    public String getContact() {
+        return contact;
     }
 
-    public void setShift(String shift) {
-        this.shift = shift;
+    public void setContact(String contact) {
+        this.contact = contact;
     }
 
     public String getStatus() {
@@ -105,12 +90,28 @@ public class Trainer {
         this.doj = doj;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public String getPassword() {
         return password;
     }
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public int getToolsIssued() {
@@ -127,5 +128,21 @@ public class Trainer {
 
     public void setToolsReturned(int toolsReturned) {
         this.toolsReturned = toolsReturned;
+    }
+
+    public int getActiveIssuance() {
+        return activeIssuance;
+    }
+
+    public void setActiveIssuance(int activeIssuance) {
+        this.activeIssuance = activeIssuance;
+    }
+
+    public int getOverdueIssuance() {
+        return overdueIssuance;
+    }
+
+    public void setOverdueIssuance(int overdueIssuance) {
+        this.overdueIssuance = overdueIssuance;
     }
 }

@@ -4,7 +4,6 @@ import com.google.zxing.WriterException;
 import com.tms.restapi.toolsmanagement.tools.model.Tool;
 import com.tms.restapi.toolsmanagement.tools.model.Tool.Location;
 import com.tms.restapi.toolsmanagement.tools.repository.ToolRepository;
-import com.tms.restapi.toolsmanagement.utils.QRCodeGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,19 +30,19 @@ public class ToolService {
         Tool savedTool = toolRepository.save(tool);
 
         // Prepare QR content
-        String qrContent = "Tool ID: " + savedTool.getId() +
-                "\nTool No: " + savedTool.getToolNo() +
-                "\nDescription: " + savedTool.getDescription() +
-                "\nLocation: " + savedTool.getLocation() +
-                "\nStatus: " + savedTool.getStatus() +
-                "\nQuantity: " + savedTool.getQuantity() +
-                "\nCalibration Date: " + savedTool.getCalibrationDate();
+        // String qrContent = "Tool ID: " + savedTool.getId() +
+        //         "\nTool No: " + savedTool.getToolNo() +
+        //         "\nDescription: " + savedTool.getDescription() +
+        //         "\nLocation: " + savedTool.getLocation() +
+        //         "\nStatus: " + savedTool.getStatus() +
+        //         "\nQuantity: " + savedTool.getQuantity() +
+        //         "\nCalibration Date: " + savedTool.getCalibrationDate();
 
-        // Generate QR Code
-        String qrFileName = "tool_" + savedTool.getId();
-        String qrPath = QRCodeGenerator.generateQRCode(qrContent, qrFileName);
+        // // Generate QR Code
+        // String qrFileName = "tool_" + savedTool.getId();
+        // String qrPath = QRCodeGenerator.generateQRCode(qrContent, qrFileName);
 
-        savedTool.setQrCodePath(qrPath);
+        // savedTool.setQrCodePath(qrPath);
         return toolRepository.save(savedTool);
     }
 
