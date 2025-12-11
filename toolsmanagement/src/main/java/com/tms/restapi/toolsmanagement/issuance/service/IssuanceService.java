@@ -242,4 +242,21 @@ public class IssuanceService {
     public List<Issuance> getCurrentIssuedItems() {
         return issuanceRepository.findByStatus("ISSUED");
     }
+
+    // Return record retrieval helpers
+    public List<ReturnRecord> getAllReturnRecords() {
+        return returnRecordRepository.findAll();
+    }
+
+    public List<ReturnRecord> getReturnRecordsByLocation(String location) {
+        return returnRecordRepository.findByIssuance_Location(location);
+    }
+
+    public List<ReturnRecord> getReturnRecordsByTrainer(Long trainerId) {
+        return returnRecordRepository.findByIssuance_TrainerId(trainerId);
+    }
+
+    public List<ReturnRecord> getReturnRecordsByLocationAndTrainer(String location, Long trainerId) {
+        return returnRecordRepository.findByIssuance_LocationAndIssuance_TrainerId(location, trainerId);
+    }
 }
