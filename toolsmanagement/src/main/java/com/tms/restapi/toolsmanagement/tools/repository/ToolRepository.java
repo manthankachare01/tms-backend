@@ -15,4 +15,6 @@ public interface ToolRepository extends JpaRepository<Tool, Long> {
             String description,
             String toolNo
     );
+
+    List<Tool> findByToolNoIn(List<String> toolNos);
 }

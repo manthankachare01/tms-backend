@@ -20,6 +20,11 @@ public class Issuance {
     private String status; // Pending, Approved, Rejected, Returned
     private String location;
     private String comment;
+    // issuance type: TOOL or KIT
+    private String issuanceType;
+
+    // remarks for issuance
+    private String remarks;
     @ElementCollection
     private List<Long> toolIds;
 
@@ -59,5 +64,11 @@ public class Issuance {
 
     public String getComment() { return comment; }
     public void setComment(String comment) { this.comment = comment; }
+
+    public String getIssuanceType() { return issuanceType; }
+    public void setIssuanceType(String issuanceType) { this.issuanceType = issuanceType; }
+
+    public String getRemarks() { return remarks; }
+    public void setRemarks(String remarks) { this.remarks = remarks; }
 
 }

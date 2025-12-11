@@ -1,59 +1,23 @@
-package com.tms.restapi.toolsmanagement.kit.model;
+package com.tms.restapi.toolsmanagement.kit.dto;
 
 import com.tms.restapi.toolsmanagement.tools.model.Tool;
-import jakarta.persistence.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "kits")
-public class Kit {
+public class KitResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "kit_id", unique = true)
-    private String kitId;        // e.g. KIT-001
-
-    @Column(name = "kit_name")
+    private String kitId;
     private String kitName;
-
-    @Column(name = "qualification_level")
     private String qualificationLevel;
-
-    @Column(name = "training_name")
     private String trainingName;
-
-    @Column(name = "location")
     private String location;
-
-    // Remaining quantity for the kit (availability count)
-    @Column(nullable = false)
-    private Integer availability = 1;
-
-    @Column(name = "last_borrowed_by")
+    private Integer availability;
     private String lastBorrowedBy;
-
-    @Column(name = "remark")
     private String remark;
-
-    @Column(name = "kit_condition")
     private String condition;
-
-    @ManyToMany
-    @JoinTable(
-            name = "kit_tools",
-            joinColumns = @JoinColumn(name = "kit_id_fk"),
-            inverseJoinColumns = @JoinColumn(name = "tool_id_fk")
-    )
-    private List<Tool> tools = new ArrayList<>();
-
-    @OneToMany(mappedBy = "kit", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<KitAggregate> aggregates = new ArrayList<>();
-
-    // getters and setters
+    private List<Tool> tools;                      // full tool objects
+    private List<KitAggregateResponse> aggregates;
 
     public Long getId() {
         return id;
@@ -143,11 +107,11 @@ public class Kit {
         this.tools = tools;
     }
 
-    public List<KitAggregate> getAggregates() {
+    public List<KitAggregateResponse> getAggregates() {
         return aggregates;
     }
 
-    public void setAggregates(List<KitAggregate> aggregates) {
+    public void setAggregates(List<KitAggregateResponse> aggregates) {
         this.aggregates = aggregates;
     }
 }
