@@ -17,4 +17,8 @@ public interface ToolRepository extends JpaRepository<Tool, Long> {
     );
 
     List<Tool> findByToolNoIn(List<String> toolNos);
+
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM Tool t WHERE t.location = :location AND (LOWER(t.description) LIKE CONCAT('%', LOWER(:keyword), '%') OR LOWER(t.toolNo) LIKE CONCAT('%', LOWER(:keyword), '%'))")
+    List<Tool> searchByLocationAndKeyword(@org.springframework.data.repository.query.Param("location") String location,
+                                          @org.springframework.data.repository.query.Param("keyword") String keyword);
 }

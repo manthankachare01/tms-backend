@@ -89,4 +89,15 @@ public class ToolController {
         List<Tool> tools = toolService.searchTools(keyword);
         return ResponseEntity.ok(tools);
     }
+
+    // 8) Search tools by keyword within a specific location
+    // GET: /api/tools/search-by-location?keyword=spanner&location=Pune
+    @GetMapping("/search-by-location")
+    public ResponseEntity<List<Tool>> searchToolsByLocation(
+            @RequestParam String keyword,
+            @RequestParam String location
+    ) {
+        List<Tool> tools = toolService.searchToolsByLocation(keyword, location);
+        return ResponseEntity.ok(tools);
+    }
 }

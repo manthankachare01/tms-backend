@@ -113,6 +113,10 @@ public class ToolService {
                 .findByDescriptionContainingIgnoreCaseOrToolNoContainingIgnoreCase(keyword, keyword);
     }
 
+    public List<Tool> searchToolsByLocation(String keyword, String location) {
+        return toolRepository.searchByLocationAndKeyword(location, keyword);
+    }
+
     // Issuance logic can use this to update remaining quantity and lastBorrowedBy
     public Tool updateToolAfterIssuance(Long toolId, int newAvailability, String lastBorrowedBy) {
         Optional<Tool> existingOpt = toolRepository.findById(toolId);
