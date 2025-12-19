@@ -19,7 +19,7 @@ public class OtpService {
 
     private final Map<String, OtpEntry> store = new ConcurrentHashMap<>();
     private final Random random = new Random();
-    private final long TTL_SECONDS = 5 * 60; // 5 minutes
+    private final long TTL_SECONDS = 15 * 60; // 5 minutes
 
     private String key(String role, String email) {
         return role.trim().toUpperCase() + ":" + email.trim().toLowerCase();
