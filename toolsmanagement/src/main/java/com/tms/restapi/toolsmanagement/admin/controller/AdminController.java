@@ -2,6 +2,7 @@ package com.tms.restapi.toolsmanagement.admin.controller;
 
 import com.tms.restapi.toolsmanagement.admin.model.Admin;
 import com.tms.restapi.toolsmanagement.admin.service.AdminService;
+import com.tms.restapi.toolsmanagement.auth.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,11 +17,26 @@ public class AdminController {
     @Autowired
     private AdminService adminService;
 
+    @Autowired
+    private EmailService emailService;
+
     // Create admin
     // POST /api/admins/create
     @PostMapping("/create")
     public ResponseEntity<Admin> createAdmin(@RequestBody Admin admin) {
+        // capture plain password before service encodes it
+        String rawPassword = admin.getPassword();
         Admin created = adminService.createAdmin(admin);
+
+        // send credentials email (don't block creation on email failure)
+        try {
+            emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword);
+        } catch (Exception e) {
+            // log and continue - email is best-effort
+        }
+
+        // hide password in response
+        created.setPassword(null);
         return ResponseEntity.status(201).body(created);
     }
 

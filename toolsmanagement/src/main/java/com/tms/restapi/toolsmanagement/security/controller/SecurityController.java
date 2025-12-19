@@ -2,6 +2,7 @@ package com.tms.restapi.toolsmanagement.security.controller;
 
 import com.tms.restapi.toolsmanagement.security.model.Security;
 import com.tms.restapi.toolsmanagement.security.service.SecurityService;
+import com.tms.restapi.toolsmanagement.auth.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,10 +18,18 @@ public class SecurityController {
     @Autowired
     private SecurityService securityService;
 
+    @Autowired
+    private EmailService emailService;
+
     @PostMapping("/create")
     public ResponseEntity<?> createSecurity(@RequestBody Security security) {
         try {
+            String rawPassword = security.getPassword();
             Security created = securityService.createSecurity(security);
+
+            // send credentials (best-effort)
+            try { emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword); } catch (Exception ignored) {}
+
             // do not return password to client
             created.setPassword(null);
             return ResponseEntity.ok(created);

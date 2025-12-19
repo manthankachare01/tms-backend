@@ -86,4 +86,68 @@ public class EmailService {
             throw new RuntimeException("Failed to send OTP email. For dev, check logs for OTP: " + otp, e);
         }
     }
+
+    /**
+     * Send welcome credentials email with username and password.
+     * Message format:
+     * Welcome to tools management system
+     * username : <email>
+     * password : <password>
+     * Please reset your password
+     */
+    public void sendCredentials(String to, String plainPassword) {
+        String body = "Welcome to tools management system\n" +
+                "username : " + to + "\n" +
+                "password : " + plainPassword + "\n" +
+                "Please reset your password";
+
+        // Prefer Brevo if configured
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            try {
+                String url = "https://api.brevo.com/v3/smtp/email";
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("api-key", brevoApiKey);
+
+                Map<String, Object> payload = new HashMap<>();
+                Map<String, String> sender = new HashMap<>();
+                sender.put("email", brevoSenderEmail);
+                sender.put("name", brevoSenderName);
+                payload.put("sender", sender);
+
+                Map<String, String> toMap = new HashMap<>();
+                toMap.put("email", to);
+                payload.put("to", new Map[]{toMap});
+
+                payload.put("subject", "Welcome to Tools Management System");
+                payload.put("textContent", body);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+                ResponseEntity<String> resp = rest.postForEntity(url, entity, String.class);
+                logger.info("Brevo credentials response: {}", resp.getStatusCode());
+                return;
+            } catch (Exception e) {
+                logger.warn("Brevo sendCredentials failed for {}: {}", to, e.getMessage());
+                throw new RuntimeException("Brevo send failed. Check logs for credentials for " + to, e);
+            }
+        }
+
+        // Fallback to SMTP
+        if (mailSender == null) {
+            logger.warn("Mail sender not configured and Brevo not set. Credentials for {}: {}", to, plainPassword);
+            throw new RuntimeException("Mail sender not configured and Brevo not configured. For dev, check logs for credentials.");
+        }
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject("Welcome to Tools Management System");
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Credentials email sent to: {}", to);
+        } catch (Exception e) {
+            logger.warn("Failed to send credentials email to {}. Error: {}", to, e.getMessage());
+            throw new RuntimeException("Failed to send credentials email. For dev, check logs for credentials for " + to, e);
+        }
+    }
 }

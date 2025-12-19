@@ -2,6 +2,7 @@ package com.tms.restapi.toolsmanagement.trainer.controller;
 
 import com.tms.restapi.toolsmanagement.trainer.model.Trainer;
 import com.tms.restapi.toolsmanagement.trainer.service.TrainerService;
+import com.tms.restapi.toolsmanagement.auth.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,9 @@ public class TrainerController {
     @Autowired
     private TrainerService trainerService;
 
+    @Autowired
+    private EmailService emailService;
+
     // 1) Create trainer (location from adminLocation, not from form)
     // POST: /api/trainers/create?adminLocation=Pune
     @PostMapping("/create")
@@ -25,7 +29,13 @@ public class TrainerController {
             @RequestParam String adminLocation,
             @RequestBody Trainer trainer
     ) {
+        // capture raw password before encoding
+        String rawPassword = trainer.getPassword();
         Trainer created = trainerService.createTrainer(trainer, adminLocation);
+
+        // send credentials email (best-effort)
+        try { emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword); } catch (Exception ignored) {}
+
         // do not send password back
         created.setPassword(null);
         return ResponseEntity.ok(created);
