@@ -99,4 +99,9 @@ public class AdminService {
         admin.setPassword(passwordEncoder.encode(newPassword));
         adminRepository.save(admin);
     }
+
+    // helper to find admin by email
+    public Admin findByEmail(String email) {
+        return adminRepository.findByEmail(email);
+    }
 }
