@@ -34,7 +34,7 @@ public class TrainerController {
         Trainer created = trainerService.createTrainer(trainer, adminLocation);
 
         // send credentials email (best-effort)
-        try { emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword); } catch (Exception ignored) {}
+        try { emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword, created.getRole() == null ? "Trainer" : created.getRole()); } catch (Exception ignored) {}
 
         // do not send password back
         created.setPassword(null);

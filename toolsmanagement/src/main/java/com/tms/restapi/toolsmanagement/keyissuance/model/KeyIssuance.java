@@ -28,9 +28,6 @@ public class KeyIssuance {
     @Column(name = "trainer_name", nullable = false)
     private String trainerName;
 
-    @Column(name = "key_no", nullable = false)
-    private String keyNo;
-
     @Column(name = "location", nullable = false)
     private String location;
 
@@ -94,14 +91,6 @@ public class KeyIssuance {
 
     public void setTrainerName(String trainerName) {
         this.trainerName = trainerName;
-    }
-
-    public String getKeyNo() {
-        return keyNo;
-    }
-
-    public void setKeyNo(String keyNo) {
-        this.keyNo = keyNo;
     }
 
     public String getLocation() {

@@ -28,7 +28,7 @@ public class SecurityController {
             Security created = securityService.createSecurity(security);
 
             // send credentials (best-effort)
-            try { emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword); } catch (Exception ignored) {}
+            try { emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword, created.getRole() == null ? "Security" : created.getRole()); } catch (Exception ignored) {}
 
             // do not return password to client
             created.setPassword(null);

@@ -33,7 +33,7 @@ public class KeyIssuanceServiceImpl implements KeyIssuanceService {
         issuance.setSecurityName(request.getSecurityName());
         issuance.setTrainerId(request.getTrainerId());
         issuance.setTrainerName(request.getTrainerName());
-        issuance.setKeyNo(request.getKeyNo());
+        //issuance.setKeyNo(request.getKeyNo());
         issuance.setLocation(request.getLocation());
 
         issuance.setStatus("issued");

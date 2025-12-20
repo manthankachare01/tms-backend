@@ -42,6 +42,12 @@ public class IssuanceService {
     @Autowired
     private TrainerRepository trainerRepository;
 
+    @Autowired
+    private com.tms.restapi.toolsmanagement.auth.service.EmailService emailService;
+
+    @Autowired
+    private com.tms.restapi.toolsmanagement.admin.repository.AdminRepository adminRepository;
+
     public Issuance createIssuanceRequest(Issuance issuance) {
         // basic validation
         if (issuance.getTrainerId() == null) {
@@ -73,7 +79,19 @@ public class IssuanceService {
             trainerRepository.save(trainer);
         }
 
-        return issuanceRepository.save(issuance);
+        Issuance saved = issuanceRepository.save(issuance);
+
+        // send issuance email to trainer (best-effort)
+        try {
+            Trainer t = trainerRepository.findById(saved.getTrainerId()).orElse(null);
+            if (t != null && t.getEmail() != null) {
+                emailService.sendIssuanceEmail(saved, t.getEmail());
+            }
+        } catch (Exception e) {
+            // do not fail issuance if email sending fails
+        }
+
+        return saved;
     }
 
     public List<Issuance> getRequestsByTrainer(Long trainerId) {
@@ -231,7 +249,85 @@ public class IssuanceService {
 
             // store actual return date on issuance
             req.setReturnDate(actualReturnDate);
-            return issuanceRepository.save(req);
+            Issuance savedReq = issuanceRepository.save(req);
+
+            // send return email to trainer (best-effort)
+            try {
+                Trainer tr = trainerRepository.findById(savedReq.getTrainerId()).orElse(null);
+                if (tr != null && tr.getEmail() != null) {
+                    ReturnRecord savedRr = rr; // rr already saved above
+                    emailService.sendReturnEmail(savedRr, tr.getEmail());
+                }
+            } catch (Exception e) {
+                // ignore email failures
+            }
+
+            // Check if any items were returned in damaged/missing/obsolete condition
+            // If so, notify the admin(s) of that location
+            List<ReturnItem> problematicItems = new java.util.ArrayList<>();
+            if (rr.getItems() != null) {
+                for (ReturnItem ri : rr.getItems()) {
+                    String condition = ri.getCondition();
+                    if (condition != null && (
+                            condition.equalsIgnoreCase("damaged") ||
+                            condition.equalsIgnoreCase("missing") ||
+                            condition.equalsIgnoreCase("obsolete"))) {
+                        problematicItems.add(ri);
+                    }
+                }
+            }
+
+            // If problematic items exist, send notification to admins of the location
+            if (!problematicItems.isEmpty() && savedReq.getLocation() != null) {
+                try {
+                    List<com.tms.restapi.toolsmanagement.admin.model.Admin> admins =
+                            adminRepository.findByLocation(savedReq.getLocation());
+                    if (admins != null && !admins.isEmpty()) {
+                        for (com.tms.restapi.toolsmanagement.admin.model.Admin admin : admins) {
+                            try {
+                                emailService.sendDamagedItemNotification(problematicItems, savedReq, admin.getEmail(), admin.getName());
+                            } catch (Exception e) {
+                                // ignore individual admin email failures
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // ignore if admin repository access fails
+                }
+            }
+
+            // If issuance is overdue, send notification to trainer and admins
+            if ("OVERDUE".equals(savedReq.getStatus())) {
+                try {
+                    Trainer tr = trainerRepository.findById(savedReq.getTrainerId()).orElse(null);
+                    if (tr != null && tr.getEmail() != null) {
+                        emailService.sendOverdueEmailToTrainer(savedReq, tr.getEmail(), tr.getName());
+                    }
+                } catch (Exception e) {
+                    // ignore trainer email failure
+                }
+
+                // Notify admins of the location about overdue
+                if (savedReq.getLocation() != null) {
+                    try {
+                        List<com.tms.restapi.toolsmanagement.admin.model.Admin> admins =
+                                adminRepository.findByLocation(savedReq.getLocation());
+                        if (admins != null && !admins.isEmpty()) {
+                            for (com.tms.restapi.toolsmanagement.admin.model.Admin admin : admins) {
+                                try {
+                                    emailService.sendOverdueEmailToAdmin(savedReq, admin.getEmail(), admin.getName());
+                                } catch (Exception e) {
+                                    // ignore individual admin email failure
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // ignore admin repository access failure
+                    }
+                }
+            }
+
+            return savedReq;
         }).orElse(null);
     }
 

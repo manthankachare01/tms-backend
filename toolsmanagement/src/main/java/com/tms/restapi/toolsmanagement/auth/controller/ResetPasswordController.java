@@ -118,7 +118,7 @@ public class ResetPasswordController {
         String otp = otpService.generateOtp(role, request.getEmail());
 
         try {
-            emailService.sendOtp(request.getEmail(), otp);
+            emailService.sendOtp(request.getEmail(), otp, role);
         } catch (RuntimeException e) {
             // If mail not configured, return success with OTP in body for development
             return ResponseEntity.ok("OTP (dev): " + otp + ". Mail sending failed: " + e.getMessage());

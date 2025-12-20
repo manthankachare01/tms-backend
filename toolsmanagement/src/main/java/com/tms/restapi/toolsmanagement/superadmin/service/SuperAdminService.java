@@ -12,6 +12,9 @@ public class SuperAdminService {
     @Autowired
     private SuperAdminRepository repository;
 
+    @Autowired(required = false)
+    private com.tms.restapi.toolsmanagement.auth.service.EmailService emailService;
+
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public SuperAdmin createSuperAdmin(SuperAdmin admin) {
@@ -24,13 +27,33 @@ public class SuperAdminService {
         SuperAdmin saved = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Superadmin not found"));
 
-        if (data.getEmail() != null) saved.setEmail(data.getEmail());
+        String rawPassword = data.getPassword();
+        boolean emailChanged = false;
+        boolean passwordChanged = false;
+
+        if (data.getEmail() != null && !data.getEmail().equals(saved.getEmail())) {
+            saved.setEmail(data.getEmail());
+            emailChanged = true;
+        }
         if (data.getName() != null) saved.setName(data.getName());
-        if (data.getPassword() != null) {
-            saved.setPassword(encoder.encode(data.getPassword()));
+        if (rawPassword != null) {
+            saved.setPassword(encoder.encode(rawPassword));
+            passwordChanged = true;
         }
 
-        return repository.save(saved);
+        SuperAdmin out = repository.save(saved);
+
+        // Notify SuperAdmin at new email if credentials changed
+        if ((emailChanged || passwordChanged) && emailService != null) {
+            try {
+                // send to the saved (possibly new) email; include plain password only if it was changed
+                emailService.sendSuperAdminUpdated(out.getEmail(), out.getName(), passwordChanged ? rawPassword : null);
+            } catch (Exception e) {
+                // best-effort - do not fail update
+            }
+        }
+
+        return out;
     }
 
     public SuperAdmin findInternal(String email) {

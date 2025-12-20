@@ -30,7 +30,7 @@ public class AdminController {
 
         // send credentials email (don't block creation on email failure)
         try {
-            emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword);
+            emailService.sendCredentials(created.getEmail(), rawPassword == null ? "" : rawPassword, created.getRole());
         } catch (Exception e) {
             // log and continue - email is best-effort
         }
