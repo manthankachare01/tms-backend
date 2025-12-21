@@ -77,7 +77,7 @@ public class EmailService {
                 String html = "<p>Dear " + salutation + ",</p>"
                         + "<p>Greetings from Škoda Volkswagen India Pvt. Ltd.</p>"
                         + "<p>We received a request to reset the password for your registered account. To proceed with the password reset, please use the <strong>One-Time Password (OTP)</strong> provided below:</p>"
-                        + "<h2 style=\"color:#333;\">OTP: <strong>" + otp + "</strong></h2>"
+                        + "<h4 style=\"color:#333;\">OTP: " + otp + "</h4>"
                         + "<p>This OTP is valid for <strong>10 minutes</strong> only. Please do not share this OTP with anyone for security reasons.</p>"
                         + "<p>Warm regards,<br><strong>IT Support Team</strong><br>Škoda Volkswagen India Pvt. Ltd.</p>";
                 payload.put("htmlContent", html);
