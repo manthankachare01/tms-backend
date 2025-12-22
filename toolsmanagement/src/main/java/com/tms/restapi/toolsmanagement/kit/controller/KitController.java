@@ -19,10 +19,12 @@ public class KitController {
         this.kitService = kitService;
     }
 
-    // POST http://localhost:8080/api/kits/create
+    // POST http://localhost:8080/api/kits/create?createdBy=AdminName
     @PostMapping("/create")
-    public ResponseEntity<KitResponse> createKit(@RequestBody KitCreateRequest request) {
-        KitResponse response = kitService.createKit(request);
+    public ResponseEntity<KitResponse> createKit(
+            @RequestParam(defaultValue = "System") String createdBy,
+            @RequestBody KitCreateRequest request) {
+        KitResponse response = kitService.createKit(request, createdBy);
         return ResponseEntity.ok(response);
     }
 

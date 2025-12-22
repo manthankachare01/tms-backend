@@ -9,6 +9,7 @@ import com.tms.restapi.toolsmanagement.tools.repository.ToolRepository;
 import org.springframework.stereotype.Service;
 import com.tms.restapi.toolsmanagement.exception.BadRequestException;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +33,7 @@ public class KitService {
     }
 
     // CREATE: one kit per request (single location only)
-    public KitResponse createKit(KitCreateRequest request) {
+    public KitResponse createKit(KitCreateRequest request, String createdBy) {
 
         // Require a non-empty location string for kit creation
         if (request.getLocation() == null || request.getLocation().trim().isEmpty()) {
@@ -53,6 +54,10 @@ public class KitService {
         kit.setRemark(request.getRemark());
         kit.setCondition(request.getCondition());
         kit.setTools(tools);
+        
+        // Set creator info
+        kit.setCreatedBy(createdBy);
+        kit.setCreatedAt(LocalDateTime.now());
 
         List<KitAggregate> aggregates = new ArrayList<>();
         if (request.getAggregates() != null) {

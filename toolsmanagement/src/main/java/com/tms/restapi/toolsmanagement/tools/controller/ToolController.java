@@ -19,13 +19,14 @@ public class ToolController {
     private ToolService toolService;
 
     // 1) Create tool
-    // POST: /api/tools/create?adminLocation=Pune
+    // POST: /api/tools/create?adminLocation=Pune&createdBy=AdminName
     @PostMapping("/create")
     public ResponseEntity<Tool> createTool(
             @RequestParam String adminLocation,
+            @RequestParam(defaultValue = "System") String createdBy,
             @RequestBody Tool tool
     ) {
-        Tool created = toolService.createTool(tool, adminLocation);
+        Tool created = toolService.createTool(tool, adminLocation, createdBy);
         return ResponseEntity.ok(created);
     }
 

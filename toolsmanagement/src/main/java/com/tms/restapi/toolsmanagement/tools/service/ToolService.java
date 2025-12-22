@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,7 +38,7 @@ public class ToolService {
     }
 
     // Create tool (location from adminLocation, availability = quantity initially)
-    public Tool createTool(Tool tool, String adminLocation) {
+    public Tool createTool(Tool tool, String adminLocation, String createdBy) {
         tool.setId(null); // new entity
 
         // Force location from admin
@@ -48,6 +49,10 @@ public class ToolService {
 
         // lastBorrowedBy starts as null
         tool.setLastBorrowedBy(null);
+
+        // Set creator info
+        tool.setCreatedBy(createdBy);
+        tool.setCreatedAt(LocalDateTime.now());
 
         // calibration logic
         updateNextCalibrationDate(tool);

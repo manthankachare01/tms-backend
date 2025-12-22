@@ -2,6 +2,7 @@ package com.tms.restapi.toolsmanagement.tools.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tools")
@@ -61,6 +62,13 @@ public class Tool {
 
     @Column(name = "last_borrowed_by")
     private String lastBorrowedBy;
+
+    // Track who created this tool and when
+    @Column(name = "created_by")
+    private String createdBy;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     // Getters and Setters
 
@@ -184,5 +192,21 @@ public class Tool {
 
     public void setLastBorrowedBy(String lastBorrowedBy) {
         this.lastBorrowedBy = lastBorrowedBy;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

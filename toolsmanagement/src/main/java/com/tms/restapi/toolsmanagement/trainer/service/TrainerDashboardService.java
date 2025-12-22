@@ -42,9 +42,15 @@ public class TrainerDashboardService {
     @Autowired
     private TrainerRepository trainerRepository;
 
+    @Autowired
+    private com.tms.restapi.toolsmanagement.issuance.service.IssuanceService issuanceService;
+
     public AdminDashboardResponse getDashboardForTrainer(Long trainerId) {
         AdminDashboardResponse resp = new AdminDashboardResponse();
         if (trainerId == null) return resp;
+
+        // Update overdue statuses first
+        issuanceService.updateOverdueStatuses();
 
         LocalDate today = LocalDate.now();
 
@@ -63,8 +69,9 @@ public class TrainerDashboardService {
             }
         }
 
-        resp.setTotalTools(0); // not applicable for trainer view
-        resp.setTotalKits(0);
+        // totalTools = total issuance count by this trainer till date; totalKits = total returns count by this trainer till date
+        resp.setTotalTools(totalIssuance);
+        resp.setTotalKits(totalReturns);
         resp.setIssuanceToday(issuanceToday);
         resp.setReturnsToday(returns == null ? 0 : (int) returns.stream().filter(r -> r.getActualReturnDate() != null && r.getActualReturnDate().isEqual(today)).count());
         resp.setOverdueIssuance(overdue);
@@ -108,10 +115,6 @@ public class TrainerDashboardService {
                 .collect(Collectors.toList());
 
         resp.setRecentActivities(sorted);
-
-        // set totals in separate fields: repurpose totalTools/totalKits to show total issuance/returns
-        resp.setTotalTools(totalIssuance);
-        resp.setTotalKits(totalReturns);
 
         return resp;
     }

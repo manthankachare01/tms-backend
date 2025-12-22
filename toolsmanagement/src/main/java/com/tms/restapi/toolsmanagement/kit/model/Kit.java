@@ -3,6 +3,7 @@ package com.tms.restapi.toolsmanagement.kit.model;
 import com.tms.restapi.toolsmanagement.tools.model.Tool;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,6 +53,13 @@ public class Kit {
 
     @OneToMany(mappedBy = "kit", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<KitAggregate> aggregates = new ArrayList<>();
+
+    // Track who created this kit and when
+    @Column(name = "created_by")
+    private String createdBy;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     // getters and setters
 
@@ -149,5 +157,21 @@ public class Kit {
 
     public void setAggregates(List<KitAggregate> aggregates) {
         this.aggregates = aggregates;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

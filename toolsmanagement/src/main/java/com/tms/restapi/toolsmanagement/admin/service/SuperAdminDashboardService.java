@@ -37,8 +37,15 @@ public class SuperAdminDashboardService {
     @Autowired
     private ReturnRepository returnRepository;
 
+    @Autowired
+    private com.tms.restapi.toolsmanagement.issuance.service.IssuanceService issuanceService;
+
     public AdminDashboardResponse getGlobalDashboard() {
         AdminDashboardResponse resp = new AdminDashboardResponse();
+        
+        // Update overdue statuses first
+        issuanceService.updateOverdueStatuses();
+        
         LocalDate today = LocalDate.now();
 
         List<Tool> tools = toolRepository.findAll();
@@ -75,15 +82,25 @@ public class SuperAdminDashboardService {
                 }
             }
         }
+        
+        // Also count tools with damaged/missing/obsolete condition globally
+        if (tools != null) {
+            for (Tool t : tools) {
+                String cond = t.getCondition();
+                if (cond != null && (cond.equalsIgnoreCase("damaged") || cond.equalsIgnoreCase("missing") || cond.equalsIgnoreCase("obsolete"))) {
+                    damagedCount++;
+                }
+            }
+        }
+        
         resp.setReturnsToday(returnsToday);
         resp.setDamagedCount(damagedCount);
 
-        // calibration required across all tools: nextCalibrationDate within next 30 days
+        // calibration required across all tools: only count tools that have calibration required flag set to true
         int calibCount = 0;
         if (tools != null) {
-            LocalDate limit = today.plusDays(30);
             for (Tool t : tools) {
-                if (t.isCalibrationRequired() && t.getNextCalibrationDate() != null && !t.getNextCalibrationDate().isAfter(limit)) {
+                if (t.isCalibrationRequired()) {
                     calibCount++;
                 }
             }
@@ -121,9 +138,11 @@ public class SuperAdminDashboardService {
                 .sorted(Comparator.comparingLong(t -> t.getId() == null ? 0L : -t.getId()))
                 .limit(8).collect(Collectors.toList());
         for (Tool t : latestTools) {
-            ActivityDto act = new ActivityDto("Added Tool", null, "Tool", t.getDescription(), null, t.getLocation());
-            act.setTimestamp(null);
-            act.setTimeAgo(null);
+            ActivityDto act = new ActivityDto("Added Tool", t.getCreatedBy(), "Tool", t.getDescription(), null, t.getLocation());
+            LocalDateTime ts = t.getCreatedAt();
+            act.setTimestamp(ts);
+            act.setTimeAgo(formatTimeAgo(ts));
+            act.setDate(t.getCreatedAt() != null ? t.getCreatedAt().toLocalDate() : null);
             activities.add(act);
         }
 
@@ -131,9 +150,11 @@ public class SuperAdminDashboardService {
                 .sorted(Comparator.comparingLong(k -> k.getId() == null ? 0L : -k.getId()))
                 .limit(8).collect(Collectors.toList());
         for (Kit k : latestKits) {
-            ActivityDto act = new ActivityDto("Added Kit", null, "Kit", k.getKitName(), null, k.getLocation());
-            act.setTimestamp(null);
-            act.setTimeAgo(null);
+            ActivityDto act = new ActivityDto("Added Kit", k.getCreatedBy(), "Kit", k.getKitName(), null, k.getLocation());
+            LocalDateTime ts = k.getCreatedAt();
+            act.setTimestamp(ts);
+            act.setTimeAgo(formatTimeAgo(ts));
+            act.setDate(k.getCreatedAt() != null ? k.getCreatedAt().toLocalDate() : null);
             activities.add(act);
         }
 

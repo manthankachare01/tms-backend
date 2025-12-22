@@ -48,6 +48,56 @@ public class IssuanceService {
     @Autowired
     private com.tms.restapi.toolsmanagement.admin.repository.AdminRepository adminRepository;
 
+    /**
+     * Update overdue status for issuances where expected return date has been exceeded
+     * and issuance status is not yet RETURNED or OVERDUE
+     */
+    public void updateOverdueStatuses() {
+        LocalDate today = LocalDate.now();
+        List<Issuance> issuances = issuanceRepository.findAll();
+        
+        for (Issuance i : issuances) {
+            // Check if issuance is still ISSUED and expected return date has passed
+            if ("ISSUED".equalsIgnoreCase(i.getStatus()) && 
+                i.getReturnDate() != null && 
+                i.getReturnDate().isBefore(today)) {
+                
+                // Mark as overdue
+                i.setStatus("OVERDUE");
+                issuanceRepository.save(i);
+                
+                // Send notifications
+                try {
+                    Trainer trainer = trainerRepository.findById(i.getTrainerId()).orElse(null);
+                    if (trainer != null && trainer.getEmail() != null) {
+                        emailService.sendOverdueEmailToTrainer(i, trainer.getEmail(), trainer.getName());
+                    }
+                } catch (Exception e) {
+                    // ignore trainer email failure
+                }
+                
+                // Notify admins
+                if (i.getLocation() != null) {
+                    try {
+                        List<com.tms.restapi.toolsmanagement.admin.model.Admin> admins =
+                                adminRepository.findByLocation(i.getLocation());
+                        if (admins != null && !admins.isEmpty()) {
+                            for (com.tms.restapi.toolsmanagement.admin.model.Admin admin : admins) {
+                                try {
+                                    emailService.sendOverdueEmailToAdmin(i, admin.getEmail(), admin.getName());
+                                } catch (Exception e) {
+                                    // ignore individual admin email failure
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // ignore admin repository access failure
+                    }
+                }
+            }
+        }
+    }
+
     public Issuance createIssuanceRequest(Issuance issuance) {
         // basic validation
         if (issuance.getTrainerId() == null) {
