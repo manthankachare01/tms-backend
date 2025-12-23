@@ -6,7 +6,6 @@ public class KeyIssuanceRequest {
     private String securityName;
     private String trainerId;
     private String trainerName;
-    private String keyNo;
     private String location;
 
     public String getSecurityId() {
@@ -39,14 +38,6 @@ public class KeyIssuanceRequest {
 
     public void setTrainerName(String trainerName) {
         this.trainerName = trainerName;
-    }
-
-    public String getKeyNo() {
-        return keyNo;
-    }
-
-    public void setKeyNo(String keyNo) {
-        this.keyNo = keyNo;
     }
 
     public String getLocation() {
