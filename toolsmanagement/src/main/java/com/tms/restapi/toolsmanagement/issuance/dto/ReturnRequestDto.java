@@ -1,11 +1,15 @@
 package com.tms.restapi.toolsmanagement.issuance.dto;
 
-import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class ReturnRequestDto {
     private Long issuanceId;
-    private LocalDate actualReturnDate;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime actualReturnDate;
+    
     private String processedBy;
     private String remarks;
     private List<ReturnItemDto> items;
@@ -13,8 +17,8 @@ public class ReturnRequestDto {
     public Long getIssuanceId() { return issuanceId; }
     public void setIssuanceId(Long issuanceId) { this.issuanceId = issuanceId; }
 
-    public LocalDate getActualReturnDate() { return actualReturnDate; }
-    public void setActualReturnDate(LocalDate actualReturnDate) { this.actualReturnDate = actualReturnDate; }
+    public LocalDateTime getActualReturnDate() { return actualReturnDate; }
+    public void setActualReturnDate(LocalDateTime actualReturnDate) { this.actualReturnDate = actualReturnDate; }
 
     public String getProcessedBy() { return processedBy; }
     public void setProcessedBy(String processedBy) { this.processedBy = processedBy; }

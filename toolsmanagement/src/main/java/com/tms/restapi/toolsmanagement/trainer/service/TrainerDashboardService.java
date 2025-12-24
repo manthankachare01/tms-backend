@@ -12,7 +12,7 @@ import com.tms.restapi.toolsmanagement.kit.repository.KitRepository;
 import com.tms.restapi.toolsmanagement.tools.model.Tool;
 import com.tms.restapi.toolsmanagement.tools.repository.ToolRepository;
 import com.tms.restapi.toolsmanagement.trainer.repository.TrainerRepository;
-import com.tms.restapi.toolsmanagement.trainer.model.Trainer;
+//import com.tms.restapi.toolsmanagement.trainer.model.Trainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Comparator;
+//import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,6 +53,8 @@ public class TrainerDashboardService {
         issuanceService.updateOverdueStatuses();
 
         LocalDate today = LocalDate.now();
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime endOfToday = today.plusDays(1).atStartOfDay();
 
         List<Issuance> issuances = issuanceRepository.findByTrainerId(trainerId);
         List<ReturnRecord> returns = returnRepository.findByIssuance_TrainerId(trainerId);
@@ -64,7 +66,7 @@ public class TrainerDashboardService {
         int overdue = 0;
         if (issuances != null) {
             for (Issuance i : issuances) {
-                if (i.getIssuanceDate() != null && i.getIssuanceDate().isEqual(today)) issuanceToday++;
+                if (i.getIssuanceDate() != null && i.getIssuanceDate().isAfter(startOfToday) && i.getIssuanceDate().isBefore(endOfToday)) issuanceToday++;
                 if (i.getStatus() != null && i.getStatus().equalsIgnoreCase("OVERDUE")) overdue++;
             }
         }
@@ -73,7 +75,7 @@ public class TrainerDashboardService {
         resp.setTotalTools(totalIssuance);
         resp.setTotalKits(totalReturns);
         resp.setIssuanceToday(issuanceToday);
-        resp.setReturnsToday(returns == null ? 0 : (int) returns.stream().filter(r -> r.getActualReturnDate() != null && r.getActualReturnDate().isEqual(today)).count());
+        resp.setReturnsToday(returns == null ? 0 : (int) returns.stream().filter(r -> r.getActualReturnDate() != null && r.getActualReturnDate().isAfter(startOfToday) && r.getActualReturnDate().isBefore(endOfToday)).count());
         resp.setOverdueIssuance(overdue);
         resp.setDamagedCount((int) (returns == null ? 0 : returns.stream().flatMap(r -> r.getItems() == null ? List.<ReturnItem>of().stream() : r.getItems().stream())
                 .filter(ri -> ri.getCondition() != null && (ri.getCondition().equalsIgnoreCase("damaged") || ri.getCondition().equalsIgnoreCase("missing") || ri.getCondition().equalsIgnoreCase("obsolete"))).count()));
@@ -85,7 +87,7 @@ public class TrainerDashboardService {
             for (Issuance i : issuances) {
                 String items = buildItemList(i.getToolIds(), i.getKitIds());
                 ActivityDto act = new ActivityDto("Tool Issued", i.getTrainerName(), i.getToolIds() != null && !i.getToolIds().isEmpty() ? "Tool" : "Kit", items, i.getIssuanceDate(), i.getLocation());
-                LocalDateTime ts = i.getIssuanceDate() == null ? null : i.getIssuanceDate().atStartOfDay();
+                LocalDateTime ts = i.getIssuanceDate();
                 act.setTimestamp(ts);
                 act.setTimeAgo(formatTimeAgo(ts));
                 activities.add(act);
@@ -97,7 +99,7 @@ public class TrainerDashboardService {
                 String items = buildReturnItemList(rr);
                 String loc = rr.getIssuance() != null ? rr.getIssuance().getLocation() : null;
                 ActivityDto act = new ActivityDto("Tool Returned", rr.getIssuance() != null ? rr.getIssuance().getTrainerName() : "", "Mixed", items, rr.getActualReturnDate(), loc);
-                LocalDateTime ts = rr.getActualReturnDate() == null ? null : rr.getActualReturnDate().atStartOfDay();
+                LocalDateTime ts = rr.getActualReturnDate();
                 act.setTimestamp(ts);
                 act.setTimeAgo(formatTimeAgo(ts));
                 activities.add(act);

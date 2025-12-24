@@ -1,7 +1,8 @@
 package com.tms.restapi.toolsmanagement.issuance.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,7 +18,8 @@ public class ReturnRecord {
     @JoinColumn(name = "issuance_id")
     private Issuance issuance;
 
-    private LocalDate actualReturnDate;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime actualReturnDate;
 
     private String processedBy;
 
@@ -32,8 +34,8 @@ public class ReturnRecord {
     public Issuance getIssuance() { return issuance; }
     public void setIssuance(Issuance issuance) { this.issuance = issuance; }
 
-    public LocalDate getActualReturnDate() { return actualReturnDate; }
-    public void setActualReturnDate(LocalDate actualReturnDate) { this.actualReturnDate = actualReturnDate; }
+    public LocalDateTime getActualReturnDate() { return actualReturnDate; }
+    public void setActualReturnDate(LocalDateTime actualReturnDate) { this.actualReturnDate = actualReturnDate; }
 
     public String getProcessedBy() { return processedBy; }
     public void setProcessedBy(String processedBy) { this.processedBy = processedBy; }

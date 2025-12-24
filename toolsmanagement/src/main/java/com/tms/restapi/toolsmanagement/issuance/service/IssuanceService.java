@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -53,14 +54,14 @@ public class IssuanceService {
      * and issuance status is not yet RETURNED or OVERDUE
      */
     public void updateOverdueStatuses() {
-        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
         List<Issuance> issuances = issuanceRepository.findAll();
         
         for (Issuance i : issuances) {
             // Check if issuance is still ISSUED and expected return date has passed
             if ("ISSUED".equalsIgnoreCase(i.getStatus()) && 
                 i.getReturnDate() != null && 
-                i.getReturnDate().isBefore(today)) {
+                i.getReturnDate().isBefore(now)) {
                 
                 // Mark as overdue
                 i.setStatus("OVERDUE");
@@ -113,7 +114,8 @@ public class IssuanceService {
 
         issuance.setStatus("ISSUED");
         if (issuance.getIssuanceDate() == null) {
-            issuance.setIssuanceDate(LocalDate.now());
+            // Set accurate current timestamp with time precision
+            issuance.setIssuanceDate(LocalDateTime.now());
         }
 
         // update quantities and trainer stats (may throw BadRequestException or ResourceNotFoundException)
@@ -156,13 +158,14 @@ public class IssuanceService {
         if (body.getIssuanceId() == null) {
             throw new BadRequestException("issuanceId is required");
         }
-        if (body.getActualReturnDate() == null) {
-            throw new BadRequestException("actualReturnDate is required");
-        }
 
         return issuanceRepository.findById(body.getIssuanceId()).map(req -> {
-            LocalDate actualReturnDate = body.getActualReturnDate();
-            LocalDate plannedReturnDate = req.getReturnDate();
+            // Use provided return timestamp or set current timestamp
+            LocalDateTime actualReturnDate = body.getActualReturnDate() != null 
+                ? body.getActualReturnDate() 
+                : LocalDateTime.now();
+            
+            LocalDateTime plannedReturnDate = req.getReturnDate();
 
             // set status with null-safe check on plannedReturnDate
             if (plannedReturnDate != null && actualReturnDate.isAfter(plannedReturnDate)) {

@@ -12,8 +12,6 @@ import com.tms.restapi.toolsmanagement.tools.model.Tool;
 import com.tms.restapi.toolsmanagement.tools.repository.ToolRepository;
 import com.tms.restapi.toolsmanagement.kit.model.Kit;
 import com.tms.restapi.toolsmanagement.kit.repository.KitRepository;
-import com.tms.restapi.toolsmanagement.admin.repository.AdminRepository;
-import com.tms.restapi.toolsmanagement.admin.model.Admin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -41,9 +39,6 @@ public class AdminDashboardService {
     private ReturnRepository returnRepository;
 
     @Autowired
-    private AdminRepository adminRepository;
-
-    @Autowired
     private com.tms.restapi.toolsmanagement.issuance.service.IssuanceService issuanceService;
 
     public AdminDashboardResponse getDashboardByLocation(String location) {
@@ -54,6 +49,8 @@ public class AdminDashboardService {
         issuanceService.updateOverdueStatuses();
 
         LocalDate today = LocalDate.now();
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime endOfToday = today.plusDays(1).atStartOfDay();
 
         List<Tool> tools = toolRepository.findByLocation(location);
         List<Kit> kits = kitRepository.findByLocationIgnoreCase(location);
@@ -67,7 +64,7 @@ public class AdminDashboardService {
         int overdueCount = 0;
         if (issuances != null) {
             for (Issuance i : issuances) {
-                if (i.getIssuanceDate() != null && i.getIssuanceDate().isEqual(today)) issuanceToday++;
+                if (i.getIssuanceDate() != null && i.getIssuanceDate().isAfter(startOfToday) && i.getIssuanceDate().isBefore(endOfToday)) issuanceToday++;
                 if (i.getStatus() != null && i.getStatus().equalsIgnoreCase("OVERDUE")) overdueCount++;
             }
         }
@@ -75,22 +72,14 @@ public class AdminDashboardService {
         resp.setOverdueIssuance(overdueCount);
 
         int returnsToday = 0;
-        int damagedCount = 0;
         if (returns != null) {
             for (ReturnRecord rr : returns) {
-                if (rr.getActualReturnDate() != null && rr.getActualReturnDate().isEqual(today)) returnsToday++;
-                if (rr.getItems() != null) {
-                    for (ReturnItem ri : rr.getItems()) {
-                        String cond = ri.getCondition();
-                        if (cond != null && (cond.equalsIgnoreCase("damaged") || cond.equalsIgnoreCase("missing") || cond.equalsIgnoreCase("obsolete"))) {
-                            damagedCount++;
-                        }
-                    }
-                }
+                if (rr.getActualReturnDate() != null && rr.getActualReturnDate().isAfter(startOfToday) && rr.getActualReturnDate().isBefore(endOfToday)) returnsToday++;
             }
         }
         
-        // Also count tools with damaged/missing/obsolete condition in the location
+        // Count tools with damaged/missing/obsolete condition in the location (from tools table only)
+        int damagedCount = 0;
         if (tools != null) {
             for (Tool t : tools) {
                 String cond = t.getCondition();
@@ -120,8 +109,9 @@ public class AdminDashboardService {
         if (issuances != null) {
             for (Issuance i : issuances) {
                 String names = buildItemList(i.getToolIds(), i.getKitIds());
-                ActivityDto act = new ActivityDto("Tool Issued", i.getTrainerName(), i.getToolIds() != null && !i.getToolIds().isEmpty() ? "Tool" : "Kit", names, i.getIssuanceDate());
-                LocalDateTime ts = i.getIssuanceDate() == null ? null : i.getIssuanceDate().atStartOfDay();
+                String type = i.getToolIds() != null && !i.getToolIds().isEmpty() ? "Tool" : "Kit";
+                ActivityDto act = new ActivityDto("Tool Issued", i.getTrainerName(), type, names, i.getIssuanceDate());
+                LocalDateTime ts = i.getIssuanceDate(); // Use accurate timestamp directly
                 act.setTimestamp(ts);
                 act.setTimeAgo(formatTimeAgo(ts));
                 activities.add(act);
@@ -132,7 +122,7 @@ public class AdminDashboardService {
             for (ReturnRecord rr : returns) {
                 String names = buildReturnItemList(rr);
                 ActivityDto act = new ActivityDto("Tool Returned", rr.getIssuance() != null ? rr.getIssuance().getTrainerName() : "", "Mixed", names, rr.getActualReturnDate());
-                LocalDateTime ts = rr.getActualReturnDate() == null ? null : rr.getActualReturnDate().atStartOfDay();
+                LocalDateTime ts = rr.getActualReturnDate(); // Use accurate timestamp directly
                 act.setTimestamp(ts);
                 act.setTimeAgo(formatTimeAgo(ts));
                 activities.add(act);
@@ -144,7 +134,7 @@ public class AdminDashboardService {
                 .sorted(Comparator.comparingLong(t -> t.getId() == null ? 0L : -t.getId()))
                 .limit(8).collect(Collectors.toList());
         for (Tool t : latestTools) {
-            ActivityDto act = new ActivityDto("Added Tool", t.getCreatedBy(), "Tool", t.getDescription(), null, t.getLocation());
+            ActivityDto act = new ActivityDto("Added Tool", t.getCreatedBy(), "Tool", t.getDescription(), t.getLocation());
             LocalDateTime ts = t.getCreatedAt();
             act.setTimestamp(ts);
             act.setTimeAgo(formatTimeAgo(ts));
@@ -156,7 +146,7 @@ public class AdminDashboardService {
                 .sorted(Comparator.comparingLong(k -> k.getId() == null ? 0L : -k.getId()))
                 .limit(8).collect(Collectors.toList());
         for (Kit k : latestKits) {
-            ActivityDto act = new ActivityDto("Added Kit", k.getCreatedBy(), "Kit", k.getKitName(), null, k.getLocation());
+            ActivityDto act = new ActivityDto("Added Kit", k.getCreatedBy(), "Kit", k.getKitName(), k.getLocation());
             LocalDateTime ts = k.getCreatedAt();
             act.setTimestamp(ts);
             act.setTimeAgo(formatTimeAgo(ts));

@@ -1,7 +1,8 @@
 package com.tms.restapi.toolsmanagement.issuance.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -15,8 +16,13 @@ public class Issuance {
     private Long trainerId;
     private String trainerName;
     private String trainingName;
-    private LocalDate issuanceDate;
-    private LocalDate returnDate;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime issuanceDate;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime returnDate;
+    
     private String status; // Pending, Approved, Rejected, Returned
     private String location;
     private String comment;
@@ -44,11 +50,11 @@ public class Issuance {
     public String getTrainingName() { return trainingName; }
     public void setTrainingName(String trainingName) { this.trainingName = trainingName; }
 
-    public LocalDate getIssuanceDate() { return issuanceDate; }
-    public void setIssuanceDate(LocalDate issuanceDate) { this.issuanceDate = issuanceDate; }
+    public LocalDateTime getIssuanceDate() { return issuanceDate; }
+    public void setIssuanceDate(LocalDateTime issuanceDate) { this.issuanceDate = issuanceDate; }
 
-    public LocalDate getReturnDate() { return returnDate; }
-    public void setReturnDate(LocalDate returnDate) { this.returnDate = returnDate; }
+    public LocalDateTime getReturnDate() { return returnDate; }
+    public void setReturnDate(LocalDateTime returnDate) { this.returnDate = returnDate; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

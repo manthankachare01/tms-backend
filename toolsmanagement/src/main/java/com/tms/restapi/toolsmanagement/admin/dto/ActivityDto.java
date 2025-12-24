@@ -53,6 +53,33 @@ public class ActivityDto {
         this.timeAgo = timeAgo;
     }
 
+    public ActivityDto(String title, String actor, String itemType, String itemNames, LocalDateTime timestamp, String location) {
+        this.title = title;
+        this.actor = actor;
+        this.itemType = itemType;
+        this.itemNames = itemNames;
+        this.timestamp = timestamp;
+        this.location = location;
+        this.date = timestamp != null ? timestamp.toLocalDate() : null;
+    }
+
+    public ActivityDto(String title, String actor, String itemType, String itemNames, LocalDateTime timestamp) {
+        this.title = title;
+        this.actor = actor;
+        this.itemType = itemType;
+        this.itemNames = itemNames;
+        this.timestamp = timestamp;
+        this.date = timestamp != null ? timestamp.toLocalDate() : null;
+    }
+
+    public ActivityDto(String title, String actor, String itemType, String itemNames, String location) {
+        this.title = title;
+        this.actor = actor;
+        this.itemType = itemType;
+        this.itemNames = itemNames;
+        this.location = location;
+    }
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
 
