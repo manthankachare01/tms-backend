@@ -113,10 +113,9 @@ public class IssuanceService {
         }
 
         issuance.setStatus("ISSUED");
-        if (issuance.getIssuanceDate() == null) {
-            // Set accurate current timestamp with time precision
-            issuance.setIssuanceDate(LocalDateTime.now());
-        }
+        // Always set the exact current timestamp when creating issuance
+        // This ensures we capture the precise moment the issuance is created
+        issuance.setIssuanceDate(LocalDateTime.now());
 
         // update quantities and trainer stats (may throw BadRequestException or ResourceNotFoundException)
         quantityService.reduceQuantities(issuance.getToolIds(), issuance.getKitIds(), issuance.getTrainerName());
