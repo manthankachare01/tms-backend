@@ -67,15 +67,10 @@ public class ToolExcelService {
 
                     tool.setQuantity(quantity);
 
-                    // availability same as quantity
                     tool.setAvailability(quantity);
 
-                    // tool condition logic
-                    tool.setCondition(
-                            getCondition(row)
-                    );
+                    tool.setCondition(getCondition(row));
 
-                    // calibration logic
                     String calReq = getString(row.getCell(10));
 
                     if (calReq.equalsIgnoreCase("NA")) {
@@ -96,7 +91,6 @@ public class ToolExcelService {
                             tool.setCalibrationPeriodMonths(24);
                         }
 
-                        // last calibration date
                         String dateStr = getString(row.getCell(11));
 
                         LocalDate lastDate =
@@ -104,7 +98,6 @@ public class ToolExcelService {
 
                         tool.setLastCalibrationDate(lastDate);
 
-                        // next calibration calculation
                         tool.setNextCalibrationDate(
                                 lastDate.plusMonths(
                                         tool.getCalibrationPeriodMonths()
@@ -114,7 +107,6 @@ public class ToolExcelService {
 
                     tool.setRemark(getString(row.getCell(12)));
 
-                    // system fields
                     tool.setCreatedBy("System");
                     tool.setLastBorrowedBy(null);
                     tool.setCreatedAt(LocalDateTime.now());
@@ -150,7 +142,12 @@ public class ToolExcelService {
 
         if (cell == null) return "";
 
-        return cell.toString().trim();
+        if (cell.getCellType() == CellType.NUMERIC) {
+            long value = (long) cell.getNumericCellValue();
+            return String.valueOf(value);
+        }
+
+        return cell.getStringCellValue().trim();
     }
 
     private String getCondition(Row row) {
