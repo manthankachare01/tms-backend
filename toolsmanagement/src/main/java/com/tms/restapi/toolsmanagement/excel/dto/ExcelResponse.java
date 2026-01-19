@@ -5,12 +5,14 @@ public class ExcelResponse {
     private int totalRecords;
     private int successRecords;
     private int failedRecords;
+    private int duplicateRecords;
     private String message;
 
-    public ExcelResponse(int total, int success, int failed, String msg) {
+    public ExcelResponse(int total, int success, int failed, int duplicate, String msg) {
         this.totalRecords = total;
         this.successRecords = success;
         this.failedRecords = failed;
+        this.duplicateRecords = duplicate;
         this.message = msg;
     }
 

@@ -31,6 +31,7 @@ public class ToolExcelService {
         int total = 0;
         int success = 0;
         int failed = 0;
+        int duplicate = 0;
 
         try {
 
@@ -55,7 +56,14 @@ public class ToolExcelService {
 
                     tool.setLocation(getString(row.getCell(0)));
 
-                    tool.setSiNo(getString(row.getCell(1)));
+                    String siNo = getString(row.getCell(1));
+
+                    if (toolRepository.existsBySiNo(siNo)) {
+                        duplicate++;
+                        continue;
+                    }
+
+                    tool.setSiNo(siNo);
 
                     tool.setToolNo(getString(row.getCell(2)));
 
@@ -125,14 +133,14 @@ public class ToolExcelService {
             workbook.close();
 
             return new ExcelResponse(
-                    total, success, failed,
+                    total, success, failed, duplicate,
                     "Excel uploaded successfully"
             );
 
         } catch (Exception e) {
 
             return new ExcelResponse(
-                    0, 0, 0,
+                    0, 0, 0,0,
                     "Error while processing file"
             );
         }
