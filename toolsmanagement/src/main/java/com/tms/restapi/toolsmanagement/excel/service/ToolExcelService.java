@@ -54,16 +54,17 @@ public class ToolExcelService {
 
                     Tool tool = new Tool();
 
-                    tool.setLocation(getString(row.getCell(0)));
-
+                    String location = getString(row.getCell(0));
                     String siNo = getString(row.getCell(1));
 
-                    if (toolRepository.existsBySiNo(siNo)) {
+                    // new duplicate check based on si_no and location
+                    if (toolRepository.existsBySiNoAndLocation(siNo, location)) {
                         duplicate++;
                         continue;
                     }
 
                     tool.setSiNo(siNo);
+                    tool.setLocation(location);
 
                     tool.setToolNo(getString(row.getCell(2)));
 

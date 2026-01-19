@@ -16,7 +16,7 @@ public interface ToolRepository extends JpaRepository<Tool, Long> {
             String toolNo
     );
 
-    boolean existsBySiNo(String siNo);
+    boolean existsBySiNoAndLocation(String siNo, String location);
 
     List<Tool> findByToolNoIn(List<String> toolNos);
 
