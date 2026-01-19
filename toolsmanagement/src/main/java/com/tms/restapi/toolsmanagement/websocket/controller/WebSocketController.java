@@ -9,8 +9,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.LocalDateTime;
-
 /**
  * WebSocket Controller for handling real-time data communication
  * Clients connect to: ws://localhost:8080/ws

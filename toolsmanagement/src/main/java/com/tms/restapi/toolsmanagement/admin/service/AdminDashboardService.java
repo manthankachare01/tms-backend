@@ -11,7 +11,6 @@ import com.tms.restapi.toolsmanagement.kit.repository.KitRepository;
 import com.tms.restapi.toolsmanagement.tools.model.Tool;
 import com.tms.restapi.toolsmanagement.tools.repository.ToolRepository;
 import com.tms.restapi.toolsmanagement.kit.model.Kit;
-import com.tms.restapi.toolsmanagement.kit.repository.KitRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
