@@ -174,22 +174,36 @@ public class ToolExcelService {
 
     private String getCondition(Row row) {
 
-        if (row.getCell(6).getNumericCellValue() == 1) {
+        try {
+            Cell c6 = row.getCell(6);
+            if (c6 != null && c6.getCellType() == CellType.NUMERIC
+                    && c6.getNumericCellValue() == 1) {
+                return "GOOD";
+            }
+
+            Cell c7 = row.getCell(7);
+            if (c7 != null && c7.getCellType() == CellType.NUMERIC
+                    && c7.getNumericCellValue() == 1) {
+                return "DAMAGED";
+            }
+
+            Cell c8 = row.getCell(8);
+            if (c8 != null && c8.getCellType() == CellType.NUMERIC
+                    && c8.getNumericCellValue() == 1) {
+                return "MISSING";
+            }
+
+            Cell c9 = row.getCell(9);
+            if (c9 != null && c9.getCellType() == CellType.NUMERIC
+                    && c9.getNumericCellValue() == 1) {
+                return "OBSOLETE";
+            }
+
+        } catch (Exception e) {
             return "GOOD";
-        }
-
-        if (row.getCell(7).getNumericCellValue() == 1) {
-            return "DAMAGED";
-        }
-
-        if (row.getCell(8).getNumericCellValue() == 1) {
-            return "MISSING";
-        }
-
-        if (row.getCell(9).getNumericCellValue() == 1) {
-            return "OBSOLETE";
         }
 
         return "GOOD";
     }
+
 }
