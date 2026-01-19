@@ -41,6 +41,14 @@ public class ExcelResponse {
         this.failedRecords = failedRecords;
     }
 
+    public int getDuplicateRecords() {
+        return duplicateRecords;
+    }
+
+    public void setDuplicateRecords(int duplicateRecords) {
+        this.duplicateRecords = duplicateRecords;
+    }
+
     public String getMessage() {
         return message;
     }
