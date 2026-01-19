@@ -57,8 +57,17 @@ public class ToolExcelService {
                     String location = getString(row.getCell(0)).trim();
                     String siNo = getString(row.getCell(1)).trim();
 
-                    // new duplicate check based on si_no and location (case-insensitive)
+                    // Check if duplicate exists in database
                     if (toolRepository.existsByBySiNoAndLocationIgnoreCaseAndTrim(siNo, location)) {
+                        duplicate++;
+                        continue;
+                    }
+
+                    // Check if duplicate already exists in current batch
+                    boolean existsInCurrentBatch = toolList.stream()
+                            .anyMatch(t -> t.getSiNo().equalsIgnoreCase(siNo) && t.getLocation().equalsIgnoreCase(location));
+                    
+                    if (existsInCurrentBatch) {
                         duplicate++;
                         continue;
                     }
