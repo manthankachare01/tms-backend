@@ -54,11 +54,11 @@ public class ToolExcelService {
 
                     Tool tool = new Tool();
 
-                    String location = getString(row.getCell(0));
-                    String siNo = getString(row.getCell(1));
+                    String location = getString(row.getCell(0)).trim();
+                    String siNo = getString(row.getCell(1)).trim();
 
-                    // new duplicate check based on si_no and location
-                    if (toolRepository.existsBySiNoAndLocation(siNo, location)) {
+                    // new duplicate check based on si_no and location (case-insensitive)
+                    if (toolRepository.existsByBySiNoAndLocationIgnoreCaseAndTrim(siNo, location)) {
                         duplicate++;
                         continue;
                     }
@@ -152,8 +152,11 @@ public class ToolExcelService {
         if (cell == null) return "";
 
         if (cell.getCellType() == CellType.NUMERIC) {
-            long value = (long) cell.getNumericCellValue();
-            return String.valueOf(value);
+            // Handle decimal numbers
+            if (cell.getNumericCellValue() % 1 == 0) {
+                return String.valueOf((long) cell.getNumericCellValue());
+            }
+            return String.valueOf(cell.getNumericCellValue());
         }
 
         return cell.getStringCellValue().trim();
