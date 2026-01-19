@@ -36,7 +36,7 @@ public class ToolExcelService {
         try {
 
             InputStream is = file.getInputStream();
-            Workbook workbook = new XSSFWorkbook(is);
+            Workbook workbook = WorkbookFactory.create(is);
             Sheet sheet = workbook.getSheetAt(0);
 
             List<Tool> toolList = new ArrayList<>();
@@ -135,6 +135,7 @@ public class ToolExcelService {
 
                 } catch (Exception e) {
                     failed++;
+                    System.out.println("Row error: " + e.getMessage());
                 }
             }
 
