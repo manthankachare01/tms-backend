@@ -135,7 +135,8 @@ public class ToolExcelService {
 
                 } catch (Exception e) {
                     failed++;
-                    System.out.println("Row error: " + e.getMessage());
+                    System.out.println("ROW FAILED AT INDEX " + i);
+                    e.printStackTrace();
                 }
             }
 
