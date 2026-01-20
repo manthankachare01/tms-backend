@@ -57,16 +57,15 @@ public class ToolExcelService {
                     String location = getString(row.getCell(0)).trim();
                     String siNo = getString(row.getCell(1)).trim();
 
-                    // Check if duplicate exists in database
                     if (toolRepository.existsByBySiNoAndLocationIgnoreCaseAndTrim(siNo, location)) {
                         duplicate++;
                         continue;
                     }
 
-                    // Check if duplicate already exists in current batch
                     boolean existsInCurrentBatch = toolList.stream()
-                            .anyMatch(t -> t.getSiNo().equalsIgnoreCase(siNo) && t.getLocation().equalsIgnoreCase(location));
-                    
+                            .anyMatch(t -> t.getSiNo().equalsIgnoreCase(siNo)
+                                    && t.getLocation().equalsIgnoreCase(location));
+
                     if (existsInCurrentBatch) {
                         duplicate++;
                         continue;
@@ -81,10 +80,13 @@ public class ToolExcelService {
 
                     tool.setToolLocation(getString(row.getCell(4)));
 
-                    int quantity = (int) row.getCell(5).getNumericCellValue();
+                    int quantity = 0;
+                    Cell qCell = row.getCell(5);
+                    if (qCell != null && qCell.getCellType() == CellType.NUMERIC) {
+                        quantity = (int) qCell.getNumericCellValue();
+                    }
 
                     tool.setQuantity(quantity);
-
                     tool.setAvailability(quantity);
 
                     tool.setCondition(getCondition(row));
@@ -111,16 +113,22 @@ public class ToolExcelService {
 
                         String dateStr = getString(row.getCell(11));
 
-                        LocalDate lastDate =
-                                LocalDate.parse(dateStr, formatter);
+                        if (dateStr != null && !dateStr.isEmpty()) {
 
-                        tool.setLastCalibrationDate(lastDate);
+                            LocalDate lastDate =
+                                    LocalDate.parse(dateStr, formatter);
 
-                        tool.setNextCalibrationDate(
-                                lastDate.plusMonths(
-                                        tool.getCalibrationPeriodMonths()
-                                )
-                        );
+                            tool.setLastCalibrationDate(lastDate);
+
+                            if (tool.getCalibrationPeriodMonths() != null) {
+
+                                tool.setNextCalibrationDate(
+                                        lastDate.plusMonths(
+                                                tool.getCalibrationPeriodMonths()
+                                        )
+                                );
+                            }
+                        }
                     }
 
                     tool.setRemark(getString(row.getCell(12)));
@@ -152,7 +160,7 @@ public class ToolExcelService {
         } catch (Exception e) {
 
             return new ExcelResponse(
-                    0, 0, 0,0,
+                    0, 0, 0, 0,
                     "Error while processing file"
             );
         }
@@ -163,10 +171,11 @@ public class ToolExcelService {
         if (cell == null) return "";
 
         if (cell.getCellType() == CellType.NUMERIC) {
-            // Handle decimal numbers
+
             if (cell.getNumericCellValue() % 1 == 0) {
                 return String.valueOf((long) cell.getNumericCellValue());
             }
+
             return String.valueOf(cell.getNumericCellValue());
         }
 
@@ -206,5 +215,4 @@ public class ToolExcelService {
 
         return "GOOD";
     }
-
 }
