@@ -107,13 +107,20 @@ public class AdminDashboardService {
 
         if (issuances != null) {
             for (Issuance i : issuances) {
-                String names = buildItemList(i.getToolIds(), i.getKitIds());
-                String type = i.getToolIds() != null && !i.getToolIds().isEmpty() ? "Tool" : "Kit";
-                ActivityDto act = new ActivityDto("Tool Issued", i.getTrainerName(), type, names, i.getIssuanceDate());
-                LocalDateTime ts = i.getIssuanceDate(); // Use accurate timestamp directly
-                act.setTimestamp(ts);
-                act.setTimeAgo(formatTimeAgo(ts));
-                activities.add(act);
+                // Only show approved issuances in activity feed (status=ISSUED or OVERDUE or RETURNED)
+                if (i.getStatus() != null && !i.getStatus().equals("PENDING")) {
+                    String names = buildItemList(i.getToolIds(), i.getKitIds());
+                    String type = i.getToolIds() != null && !i.getToolIds().isEmpty() ? "Tool" : "Kit";
+                    
+                    // Show approval info in activity if this was approved by an admin
+                    String activity = i.getApprovedBy() != null ? "Tool Issued" : "Tool Issued";
+                    ActivityDto act = new ActivityDto(activity, i.getTrainerName(), type, names, i.getIssuanceDate());
+                    
+                    LocalDateTime ts = i.getApprovalDate() != null ? i.getApprovalDate() : i.getIssuanceDate();
+                    act.setTimestamp(ts);
+                    act.setTimeAgo(formatTimeAgo(ts));
+                    activities.add(act);
+                }
             }
         }
 

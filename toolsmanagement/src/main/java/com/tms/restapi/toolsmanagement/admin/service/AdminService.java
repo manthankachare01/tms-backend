@@ -2,6 +2,8 @@ package com.tms.restapi.toolsmanagement.admin.service;
 
 import com.tms.restapi.toolsmanagement.admin.model.Admin;
 import com.tms.restapi.toolsmanagement.admin.repository.AdminRepository;
+import com.tms.restapi.toolsmanagement.issuance.model.Issuance;
+import com.tms.restapi.toolsmanagement.issuance.service.IssuanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,9 @@ public class AdminService {
 
     @Autowired
     private AdminRepository adminRepository;
+
+    @Autowired(required = false)
+    private IssuanceService issuanceService;
 
     // keep same pattern as TrainerService
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -104,4 +109,25 @@ public class AdminService {
     public Admin findByEmail(String email) {
         return adminRepository.findByEmail(email);
     }
+
+    /**
+     * Approve an issuance request - delegates to IssuanceService
+     */
+    public Issuance approveIssuanceRequest(Long requestId, String approvedBy, String approvalRemark) {
+        if (issuanceService == null) {
+            throw new RuntimeException("IssuanceService not available");
+        }
+        return issuanceService.approveIssuanceRequest(requestId, approvedBy, approvalRemark);
+    }
+
+    /**
+     * Reject an issuance request - delegates to IssuanceService
+     */
+    public void rejectIssuanceRequest(Long requestId, String rejectedBy, String rejectionReason) {
+        if (issuanceService == null) {
+            throw new RuntimeException("IssuanceService not available");
+        }
+        issuanceService.rejectIssuanceRequest(requestId, rejectedBy, rejectionReason);
+    }
 }
+

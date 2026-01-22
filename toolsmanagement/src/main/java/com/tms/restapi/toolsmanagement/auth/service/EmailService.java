@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.Map;
 import com.tms.restapi.toolsmanagement.issuance.model.Issuance;
+import com.tms.restapi.toolsmanagement.issuance.model.IssuanceRequest;
 import com.tms.restapi.toolsmanagement.issuance.model.ReturnRecord;
 import com.tms.restapi.toolsmanagement.issuance.model.ReturnItem;
 import com.tms.restapi.toolsmanagement.tools.model.Tool;
@@ -805,5 +806,267 @@ public class EmailService {
 
         // Fallback to SMTP / plain text helper
         sendPlainTextEmail(adminEmail, "Overdue Tool Alert - " + trainerName, text);
+    }
+
+    /**
+     * Send notification to admin about pending issuance request for approval
+     */
+    public void sendIssuanceRequestNotification(IssuanceRequest request, String adminEmail, String adminName) {
+        if (adminEmail == null || adminEmail.isBlank()) return;
+        if (request == null) return;
+
+        String salutation = adminName != null && !adminName.isBlank() ? adminName : "Admin";
+        String trainerName = request.getTrainerName() != null ? request.getTrainerName() : "Unknown Trainer";
+        String requestId = request.getId() != null ? request.getId().toString() : "N/A";
+        String requestDate = request.getRequestDate() != null ? request.getRequestDate().toString() : "N/A";
+
+        // Build tool/kit list
+        StringBuilder htmlItems = new StringBuilder();
+        StringBuilder textItems = new StringBuilder();
+        int counter = 1;
+
+        if (request.getToolIds() != null) {
+            for (Long toolId : request.getToolIds()) {
+                Tool t = toolRepository != null ? toolRepository.findById(toolId).orElse(null) : null;
+                String name = t != null ? t.getDescription() : "Tool " + toolId;
+                String id = t != null ? t.getToolNo() : toolId.toString();
+                htmlItems.append("<p>").append(counter).append(". ").append(escapeHtml(name))
+                        .append(" – [").append(escapeHtml(id)).append("]</p>");
+                textItems.append(counter).append(". ").append(name).append(" – [").append(id).append("]\n");
+                counter++;
+            }
+        }
+
+        if (request.getKitIds() != null) {
+            for (Long kitId : request.getKitIds()) {
+                Kit k = kitRepository != null ? kitRepository.findById(kitId).orElse(null) : null;
+                String name = k != null ? k.getKitName() : "Kit " + kitId;
+                htmlItems.append("<p>").append(counter).append(". ").append(escapeHtml(name))
+                        .append(" – [").append(escapeHtml(kitId.toString())).append("]</p>");
+                textItems.append(counter).append(". ").append(name).append(" – [").append(kitId).append("]\n");
+                counter++;
+            }
+        }
+
+        String html = "<p>Dear " + escapeHtml(salutation) + ",</p>"
+                + "<p>Greetings from Škoda Volkswagen India Pvt. Ltd.</p>"
+                + "<p>A new tool issuance request awaits your approval:</p>"
+                + "<p><strong>Trainer Name:</strong> " + escapeHtml(trainerName) + "<br/>"
+                + "<strong>Request ID:</strong> " + escapeHtml(requestId) + "<br/>"
+                + "<strong>Request Date:</strong> " + escapeHtml(requestDate) + "</p>"
+                + "<p><strong>Items Requested:</strong></p>"
+                + htmlItems.toString()
+                + "<p>Please review and approve or reject this request at your earliest convenience.</p>"
+                + "<p>Warm regards,<br/><strong>Tool Management Team</strong><br/>Škoda Volkswagen India Pvt. Ltd.</p>";
+
+        String text = "Dear " + salutation + ",\n\n"
+                + "Greetings from Škoda Volkswagen India Pvt. Ltd.\n\n"
+                + "A new tool issuance request awaits your approval:\n\n"
+                + "Trainer Name: " + trainerName + "\n"
+                + "Request ID: " + requestId + "\n"
+                + "Request Date: " + requestDate + "\n\n"
+                + "Items Requested:\n"
+                + textItems.toString()
+                + "\nPlease review and approve or reject this request at your earliest convenience.\n\n"
+                + "Warm regards,\nTool Management Team\nŠkoda Volkswagen India Pvt. Ltd.";
+
+        // Try Brevo
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            try {
+                String url = "https://api.brevo.com/v3/smtp/email";
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("api-key", brevoApiKey);
+
+                Map<String, Object> payload = new HashMap<>();
+                Map<String, String> sender = new HashMap<>();
+                sender.put("email", brevoSenderEmail);
+                sender.put("name", brevoSenderName);
+                payload.put("sender", sender);
+
+                Map<String, String> toMap = new HashMap<>();
+                toMap.put("email", adminEmail);
+                payload.put("to", new Map[]{toMap});
+
+                payload.put("subject", "New Issuance Request - Approval Needed");
+                payload.put("htmlContent", html);
+                payload.put("textContent", text);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+                rest.postForEntity(url, entity, String.class);
+                logger.info("Brevo issuance request notification sent to admin {}", adminEmail);
+                return;
+            } catch (Exception e) {
+                logger.warn("Brevo sendIssuanceRequestNotification failed for {}: {}", adminEmail, e.getMessage());
+            }
+        }
+
+        // Fallback to SMTP
+        sendPlainTextEmail(adminEmail, "New Issuance Request - Approval Needed", text);
+    }
+
+    /**
+     * Send approval notification to trainer when admin approves issuance request
+     */
+    public void sendIssuanceApprovalEmail(Issuance issuance, String trainerEmail, String trainerName) {
+        if (trainerEmail == null || trainerEmail.isBlank()) return;
+        if (issuance == null) return;
+
+        String salutation = trainerName != null && !trainerName.isBlank() ? trainerName : "Trainer";
+        String issuanceId = issuance.getId() != null ? issuance.getId().toString() : "N/A";
+        String issuanceDate = issuance.getIssuanceDate() != null ? issuance.getIssuanceDate().toString() : "N/A";
+        String returnDate = issuance.getReturnDate() != null ? issuance.getReturnDate().toString() : "N/A";
+        String approvedBy = issuance.getApprovedBy() != null ? issuance.getApprovedBy() : "Admin";
+
+        // Build tool/kit list
+        StringBuilder htmlItems = new StringBuilder();
+        StringBuilder textItems = new StringBuilder();
+        int counter = 1;
+
+        if (issuance.getToolIds() != null) {
+            for (Long toolId : issuance.getToolIds()) {
+                Tool t = toolRepository != null ? toolRepository.findById(toolId).orElse(null) : null;
+                String name = t != null ? t.getDescription() : "Tool " + toolId;
+                String id = t != null ? t.getToolNo() : toolId.toString();
+                htmlItems.append("<p>").append(counter).append(". ").append(escapeHtml(name))
+                        .append(" – [").append(escapeHtml(id)).append("]</p>");
+                textItems.append(counter).append(". ").append(name).append(" – [").append(id).append("]\n");
+                counter++;
+            }
+        }
+
+        if (issuance.getKitIds() != null) {
+            for (Long kitId : issuance.getKitIds()) {
+                Kit k = kitRepository != null ? kitRepository.findById(kitId).orElse(null) : null;
+                String name = k != null ? k.getKitName() : "Kit " + kitId;
+                htmlItems.append("<p>").append(counter).append(". ").append(escapeHtml(name))
+                        .append(" – [").append(escapeHtml(kitId.toString())).append("]</p>");
+                textItems.append(counter).append(". ").append(name).append(" – [").append(kitId).append("]\n");
+                counter++;
+            }
+        }
+
+        String html = "<p>Dear " + escapeHtml(salutation) + ",</p>"
+                + "<p>Greetings from Škoda Volkswagen India Pvt. Ltd.</p>"
+                + "<p>Your tool issuance request has been <strong>APPROVED</strong> by " + escapeHtml(approvedBy) + ".</p>"
+                + "<p><strong>Issuance Details:</strong><br/>"
+                + "<strong>Issuance ID:</strong> " + escapeHtml(issuanceId) + "<br/>"
+                + "<strong>Issuance Date:</strong> " + escapeHtml(issuanceDate) + "<br/>"
+                + "<strong>Expected Return Date:</strong> " + escapeHtml(returnDate) + "</p>"
+                + "<p><strong>Items Approved:</strong></p>"
+                + htmlItems.toString()
+                + "<p>Please ensure the tools/kits are returned by the expected return date.</p>"
+                + "<p>Warm regards,<br/><strong>Tool Management Team</strong><br/>Škoda Volkswagen India Pvt. Ltd.</p>";
+
+        String text = "Dear " + salutation + ",\n\n"
+                + "Greetings from Škoda Volkswagen India Pvt. Ltd.\n\n"
+                + "Your tool issuance request has been APPROVED by " + approvedBy + ".\n\n"
+                + "Issuance Details:\n"
+                + "Issuance ID: " + issuanceId + "\n"
+                + "Issuance Date: " + issuanceDate + "\n"
+                + "Expected Return Date: " + returnDate + "\n\n"
+                + "Items Approved:\n"
+                + textItems.toString()
+                + "\nPlease ensure the tools/kits are returned by the expected return date.\n\n"
+                + "Warm regards,\nTool Management Team\nŠkoda Volkswagen India Pvt. Ltd.";
+
+        // Try Brevo
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            try {
+                String url = "https://api.brevo.com/v3/smtp/email";
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("api-key", brevoApiKey);
+
+                Map<String, Object> payload = new HashMap<>();
+                Map<String, String> sender = new HashMap<>();
+                sender.put("email", brevoSenderEmail);
+                sender.put("name", brevoSenderName);
+                payload.put("sender", sender);
+
+                Map<String, String> toMap = new HashMap<>();
+                toMap.put("email", trainerEmail);
+                payload.put("to", new Map[]{toMap});
+
+                payload.put("subject", "Your Issuance Request Approved");
+                payload.put("htmlContent", html);
+                payload.put("textContent", text);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+                rest.postForEntity(url, entity, String.class);
+                logger.info("Brevo issuance approval notification sent to trainer {}", trainerEmail);
+                return;
+            } catch (Exception e) {
+                logger.warn("Brevo sendIssuanceApprovalEmail failed for {}: {}", trainerEmail, e.getMessage());
+            }
+        }
+
+        // Fallback to SMTP
+        sendPlainTextEmail(trainerEmail, "Your Issuance Request Approved", text);
+    }
+
+    /**
+     * Send rejection notification to trainer when admin rejects issuance request
+     */
+    public void sendIssuanceRejectionEmail(IssuanceRequest request, String trainerEmail, String trainerName) {
+        if (trainerEmail == null || trainerEmail.isBlank()) return;
+        if (request == null) return;
+
+        String salutation = trainerName != null && !trainerName.isBlank() ? trainerName : "Trainer";
+        String requestId = request.getId() != null ? request.getId().toString() : "N/A";
+        String rejectedBy = request.getApprovedBy() != null ? request.getApprovedBy() : "Admin";
+        String rejectionReason = request.getApprovalRemark() != null ? request.getApprovalRemark() : "No reason provided";
+
+        String html = "<p>Dear " + escapeHtml(salutation) + ",</p>"
+                + "<p>Greetings from Škoda Volkswagen India Pvt. Ltd.</p>"
+                + "<p>Unfortunately, your tool issuance request has been <strong>REJECTED</strong>.</p>"
+                + "<p><strong>Request ID:</strong> " + escapeHtml(requestId) + "<br/>"
+                + "<strong>Rejected By:</strong> " + escapeHtml(rejectedBy) + "<br/>"
+                + "<strong>Reason:</strong> " + escapeHtml(rejectionReason) + "</p>"
+                + "<p>Please contact the admin if you have any questions or need further assistance.</p>"
+                + "<p>Warm regards,<br/><strong>Tool Management Team</strong><br/>Škoda Volkswagen India Pvt. Ltd.</p>";
+
+        String text = "Dear " + salutation + ",\n\n"
+                + "Greetings from Škoda Volkswagen India Pvt. Ltd.\n\n"
+                + "Unfortunately, your tool issuance request has been REJECTED.\n\n"
+                + "Request ID: " + requestId + "\n"
+                + "Rejected By: " + rejectedBy + "\n"
+                + "Reason: " + rejectionReason + "\n\n"
+                + "Please contact the admin if you have any questions or need further assistance.\n\n"
+                + "Warm regards,\nTool Management Team\nŠkoda Volkswagen India Pvt. Ltd.";
+
+        // Try Brevo
+        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
+            try {
+                String url = "https://api.brevo.com/v3/smtp/email";
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("api-key", brevoApiKey);
+
+                Map<String, Object> payload = new HashMap<>();
+                Map<String, String> sender = new HashMap<>();
+                sender.put("email", brevoSenderEmail);
+                sender.put("name", brevoSenderName);
+                payload.put("sender", sender);
+
+                Map<String, String> toMap = new HashMap<>();
+                toMap.put("email", trainerEmail);
+                payload.put("to", new Map[]{toMap});
+
+                payload.put("subject", "Your Issuance Request Rejected");
+                payload.put("htmlContent", html);
+                payload.put("textContent", text);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
+                rest.postForEntity(url, entity, String.class);
+                logger.info("Brevo issuance rejection notification sent to trainer {}", trainerEmail);
+                return;
+            } catch (Exception e) {
+                logger.warn("Brevo sendIssuanceRejectionEmail failed for {}: {}", trainerEmail, e.getMessage());
+            }
+        }
+
+        // Fallback to SMTP
+        sendPlainTextEmail(trainerEmail, "Your Issuance Request Rejected", text);
     }
 }

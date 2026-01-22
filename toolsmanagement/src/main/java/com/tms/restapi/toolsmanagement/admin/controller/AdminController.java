@@ -3,6 +3,9 @@ package com.tms.restapi.toolsmanagement.admin.controller;
 import com.tms.restapi.toolsmanagement.admin.model.Admin;
 import com.tms.restapi.toolsmanagement.admin.service.AdminService;
 import com.tms.restapi.toolsmanagement.auth.service.EmailService;
+import com.tms.restapi.toolsmanagement.issuance.dto.ApprovalRequestDto;
+import com.tms.restapi.toolsmanagement.issuance.dto.RejectionRequestDto;
+import com.tms.restapi.toolsmanagement.issuance.model.Issuance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -76,5 +79,35 @@ public class AdminController {
     @DeleteMapping("/delete/{adminId}")
     public ResponseEntity<String> deleteAdmin(@PathVariable String adminId) {
         return ResponseEntity.ok(adminService.deleteAdmin(adminId));
+    }
+
+    // Approve issuance request
+    // POST /api/admins/issuance/approve
+    @PostMapping("/issuance/approve")
+    public ResponseEntity<Issuance> approveIssuanceRequest(@RequestBody ApprovalRequestDto body) {
+        if (body.getRequestId() == null || body.getApprovedBy() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Issuance approved = adminService.approveIssuanceRequest(
+                body.getRequestId(),
+                body.getApprovedBy(),
+                body.getApprovalRemark()
+        );
+        return ResponseEntity.ok(approved);
+    }
+
+    // Reject issuance request
+    // POST /api/admins/issuance/reject
+    @PostMapping("/issuance/reject")
+    public ResponseEntity<String> rejectIssuanceRequest(@RequestBody RejectionRequestDto body) {
+        if (body.getRequestId() == null || body.getRejectedBy() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        adminService.rejectIssuanceRequest(
+                body.getRequestId(),
+                body.getRejectedBy(),
+                body.getRejectionReason()
+        );
+        return ResponseEntity.ok("Issuance request rejected successfully");
     }
 }

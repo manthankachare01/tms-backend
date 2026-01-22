@@ -3,9 +3,11 @@ package com.tms.restapi.toolsmanagement.issuance.service;
 import com.tms.restapi.toolsmanagement.issuance.dto.ReturnItemDto;
 import com.tms.restapi.toolsmanagement.issuance.dto.ReturnRequestDto;
 import com.tms.restapi.toolsmanagement.issuance.model.Issuance;
+import com.tms.restapi.toolsmanagement.issuance.model.IssuanceRequest;
 import com.tms.restapi.toolsmanagement.issuance.model.ReturnItem;
 import com.tms.restapi.toolsmanagement.issuance.model.ReturnRecord;
 import com.tms.restapi.toolsmanagement.issuance.repository.IssuanceRepository;
+import com.tms.restapi.toolsmanagement.issuance.repository.IssuanceRequestRepository;
 import com.tms.restapi.toolsmanagement.issuance.repository.ReturnRepository;
 import com.tms.restapi.toolsmanagement.kit.model.Kit;
 import com.tms.restapi.toolsmanagement.kit.repository.KitRepository;
@@ -26,6 +28,9 @@ public class IssuanceService {
 
     @Autowired
     private IssuanceRepository issuanceRepository;
+
+    @Autowired
+    private IssuanceRequestRepository issuanceRequestRepository;
 
     @Autowired
     private QuantityUpdateService quantityService;
@@ -111,45 +116,213 @@ public class IssuanceService {
             throw new BadRequestException("At least one toolId or kitId is required");
         }
 
-        issuance.setStatus("ISSUED");
-        // Always set the exact current timestamp when creating issuance
-        // This ensures we capture the precise moment the issuance is created
-        issuance.setIssuanceDate(LocalDateTime.now());
+        // Create an actual Issuance record with PENDING status
+        Issuance pendingIssuance = new Issuance();
+        pendingIssuance.setTrainerId(issuance.getTrainerId());
+        pendingIssuance.setTrainerName(issuance.getTrainerName());
+        pendingIssuance.setTrainingName(issuance.getTrainingName());
+        pendingIssuance.setToolIds(issuance.getToolIds());
+        pendingIssuance.setKitIds(issuance.getKitIds());
+        pendingIssuance.setReturnDate(issuance.getReturnDate());
+        pendingIssuance.setLocation(issuance.getLocation());
+        pendingIssuance.setComment(issuance.getComment());
+        pendingIssuance.setIssuanceType(issuance.getIssuanceType());
+        pendingIssuance.setRemarks(issuance.getRemarks());
+        pendingIssuance.setStatus("PENDING");
+        pendingIssuance.setIssuanceDate(LocalDateTime.now());
 
-        // update quantities and trainer stats (may throw BadRequestException or ResourceNotFoundException)
-        quantityService.reduceQuantities(issuance.getToolIds(), issuance.getKitIds(), issuance.getTrainerName());
+        Issuance savedIssuance = issuanceRepository.save(pendingIssuance);
 
-        Trainer trainer = trainerRepository.findById(issuance.getTrainerId()).orElse(null);
+        // Create an IssuanceRequest record for admin tracking
+        IssuanceRequest request = new IssuanceRequest();
+        request.setTrainerId(issuance.getTrainerId());
+        request.setTrainerName(issuance.getTrainerName());
+        request.setTrainingName(issuance.getTrainingName());
+        request.setToolIds(issuance.getToolIds());
+        request.setKitIds(issuance.getKitIds());
+        request.setReturnDate(issuance.getReturnDate());
+        request.setLocation(issuance.getLocation());
+        request.setComment(issuance.getComment());
+        request.setIssuanceType(issuance.getIssuanceType());
+        request.setRemarks(issuance.getRemarks());
+        request.setStatus("PENDING");
+        request.setRequestDate(LocalDateTime.now());
+        request.setIssuanceId(savedIssuance.getId());  // Link to the Issuance record
+
+        IssuanceRequest savedRequest = issuanceRequestRepository.save(request);
+
+        // Send notification to admins of the location to approve request
+        if (issuance.getLocation() != null) {
+            try {
+                List<com.tms.restapi.toolsmanagement.admin.model.Admin> admins =
+                        adminRepository.findByLocation(issuance.getLocation());
+                if (admins != null && !admins.isEmpty()) {
+                    for (com.tms.restapi.toolsmanagement.admin.model.Admin admin : admins) {
+                        try {
+                            emailService.sendIssuanceRequestNotification(savedRequest, admin.getEmail(), admin.getName());
+                        } catch (Exception e) {
+                            // ignore email failure
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // ignore admin notification failure
+            }
+        }
+
+        // Return the saved Issuance with PENDING status
+        return savedIssuance;
+    }
+
+    /**
+     * Approve an issuance request by an admin
+     * This updates the Issuance status from PENDING to ISSUED and deducts availability
+     */
+    public Issuance approveIssuanceRequest(Long requestId, String approvedBy, String approvalRemark) {
+        IssuanceRequest request = issuanceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issuance request not found: id=" + requestId));
+
+        if (!request.getStatus().equals("PENDING")) {
+            throw new BadRequestException("Issuance request is not in PENDING status. Current status: " + request.getStatus());
+        }
+
+        // Deduct availability from tools and kits
+        if (request.getToolIds() != null) {
+            for (Long toolId : request.getToolIds()) {
+                Tool tool = toolRepository.findById(toolId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Tool not found: id=" + toolId));
+                if (tool.getAvailability() <= 0) {
+                    throw new BadRequestException("Tool not available: " + tool.getDescription());
+                }
+                tool.setAvailability(tool.getAvailability() - 1);
+                toolRepository.save(tool);
+            }
+        }
+
+        if (request.getKitIds() != null) {
+            for (Long kitId : request.getKitIds()) {
+                Kit kit = kitRepository.findById(kitId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Kit not found: id=" + kitId));
+                if (kit.getAvailability() <= 0) {
+                    throw new BadRequestException("Kit not available: " + kit.getKitName());
+                }
+                kit.setAvailability(kit.getAvailability() - 1);
+                kitRepository.save(kit);
+            }
+        }
+
+        // Update existing PENDING Issuance to ISSUED status
+        Issuance existingIssuance = issuanceRepository.findById(request.getIssuanceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Issuance not found: id=" + request.getIssuanceId()));
+
+        existingIssuance.setStatus("ISSUED");
+        existingIssuance.setApprovedBy(approvedBy);
+        existingIssuance.setApprovalDate(LocalDateTime.now());
+        existingIssuance.setApprovalRemark(approvalRemark);
+
+        Issuance savedIssuance = issuanceRepository.save(existingIssuance);
+
+        // Update trainer stats
+        Trainer trainer = trainerRepository.findById(request.getTrainerId()).orElse(null);
         if (trainer != null) {
             int issuedCount =
-                    (issuance.getToolIds() != null ? issuance.getToolIds().size() : 0)
-                            + (issuance.getKitIds() != null ? issuance.getKitIds().size() : 0);
+                    (request.getToolIds() != null ? request.getToolIds().size() : 0)
+                            + (request.getKitIds() != null ? request.getKitIds().size() : 0);
             trainer.setToolsIssued(trainer.getToolsIssued() + issuedCount);
             trainer.setActiveIssuance(trainer.getActiveIssuance() + 1);
             trainerRepository.save(trainer);
         }
 
-        Issuance saved = issuanceRepository.save(issuance);
+        // Update the request status
+        request.setStatus("APPROVED");
+        request.setApprovedBy(approvedBy);
+        request.setApprovalDate(LocalDateTime.now());
+        request.setApprovalRemark(approvalRemark);
+        issuanceRequestRepository.save(request);
 
-        // send issuance email to trainer (best-effort)
+        // Send approval email to trainer (best-effort)
         try {
-            Trainer t = trainerRepository.findById(saved.getTrainerId()).orElse(null);
+            Trainer t = trainerRepository.findById(savedIssuance.getTrainerId()).orElse(null);
             if (t != null && t.getEmail() != null) {
-                emailService.sendIssuanceEmail(saved, t.getEmail());
+                emailService.sendIssuanceApprovalEmail(savedIssuance, t.getEmail(), t.getName());
             }
         } catch (Exception e) {
-            // do not fail issuance if email sending fails
+            // do not fail if email sending fails
         }
 
-        return saved;
+        return savedIssuance;
+    }
+
+    /**
+     * Reject an issuance request by an admin
+     * Marks both the IssuanceRequest and Issuance as REJECTED
+     */
+    public void rejectIssuanceRequest(Long requestId, String rejectedBy, String rejectionReason) {
+        IssuanceRequest request = issuanceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issuance request not found: id=" + requestId));
+
+        if (!request.getStatus().equals("PENDING")) {
+            throw new BadRequestException("Issuance request is not in PENDING status. Current status: " + request.getStatus());
+        }
+
+        // Mark the associated Issuance as REJECTED
+        if (request.getIssuanceId() != null) {
+            Issuance issuance = issuanceRepository.findById(request.getIssuanceId()).orElse(null);
+            if (issuance != null) {
+                issuance.setStatus("REJECTED");
+                issuance.setApprovedBy(rejectedBy);
+                issuance.setApprovalDate(LocalDateTime.now());
+                issuance.setApprovalRemark(rejectionReason);
+                issuanceRepository.save(issuance);
+            }
+        }
+
+        // Mark the request as REJECTED
+        request.setStatus("REJECTED");
+        request.setApprovedBy(rejectedBy);
+        request.setApprovalDate(LocalDateTime.now());
+        request.setApprovalRemark(rejectionReason);
+        issuanceRequestRepository.save(request);
+
+        // Send rejection email to trainer (best-effort)
+        try {
+            Trainer t = trainerRepository.findById(request.getTrainerId()).orElse(null);
+            if (t != null && t.getEmail() != null) {
+                emailService.sendIssuanceRejectionEmail(request, t.getEmail(), t.getName());
+            }
+        } catch (Exception e) {
+            // do not fail if email sending fails
+        }
+    }
+
+    /**
+     * Get all pending issuance requests for a location
+     */
+    public List<IssuanceRequest> getPendingRequestsByLocation(String location) {
+        return issuanceRequestRepository.findByLocationAndStatus(location, "PENDING");
+    }
+
+    /**
+     * Get all issuance requests for a location
+     */
+    public List<IssuanceRequest> getAllRequestsByLocation(String location) {
+        return issuanceRequestRepository.findByLocation(location);
     }
 
     public List<Issuance> getRequestsByTrainer(Long trainerId) {
         return issuanceRepository.findByTrainerId(trainerId);
     }
 
+    public List<IssuanceRequest> getIssuanceRequestsByTrainer(Long trainerId) {
+        return issuanceRequestRepository.findByTrainerId(trainerId);
+    }
+
     public List<Issuance> getRequestsByLocation(String location) {
         return issuanceRepository.findByLocation(location);
+    }
+
+    public List<IssuanceRequest> getAllIssuanceRequests() {
+        return issuanceRequestRepository.findAll();
     }
 
     public Issuance processReturn(ReturnRequestDto body) {
@@ -276,7 +449,25 @@ public class IssuanceService {
                 // because we already incremented per item above.
             } else {
                 // no per-item details provided: treat as full return of all issued items
-                quantityService.increaseQuantities(req.getToolIds(), req.getKitIds());
+                // Add availability back for all tools and kits
+                if (req.getToolIds() != null) {
+                    for (Long toolId : req.getToolIds()) {
+                        Tool tool = toolRepository.findById(toolId).orElse(null);
+                        if (tool != null) {
+                            tool.setAvailability(tool.getAvailability() + 1);
+                            toolRepository.save(tool);
+                        }
+                    }
+                }
+                if (req.getKitIds() != null) {
+                    for (Long kitId : req.getKitIds()) {
+                        Kit kit = kitRepository.findById(kitId).orElse(null);
+                        if (kit != null) {
+                            kit.setAvailability(kit.getAvailability() + 1);
+                            kitRepository.save(kit);
+                        }
+                    }
+                }
             }
 
             // save ReturnRecord

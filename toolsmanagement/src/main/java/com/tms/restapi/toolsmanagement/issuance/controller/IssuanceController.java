@@ -1,6 +1,9 @@
 package com.tms.restapi.toolsmanagement.issuance.controller;
 
+import com.tms.restapi.toolsmanagement.issuance.dto.ApprovalRequestDto;
+import com.tms.restapi.toolsmanagement.issuance.dto.RejectionRequestDto;
 import com.tms.restapi.toolsmanagement.issuance.dto.ReturnRequestDto;
+import com.tms.restapi.toolsmanagement.issuance.model.IssuanceRequest;
 import com.tms.restapi.toolsmanagement.issuance.model.ReturnRecord;
 import com.tms.restapi.toolsmanagement.issuance.model.Issuance;
 import com.tms.restapi.toolsmanagement.issuance.service.IssuanceService;
@@ -17,10 +20,13 @@ public class IssuanceController {
 	/*
 	 * Issuance API endpoints
 	 * ---------------------
-	 * POST   /api/issuance/request                -> create a new issuance request
-	 * GET    /api/issuance/trainer/{trainerId}    -> get issuance requests for a trainer
-	 * GET    /api/issuance/admin?location={loc}   -> get issuance requests filtered by location
-	 * GET    /api/issuance/admin/all              -> get issuance requests for all locations (no filter)
+	 * POST   /api/issuance/request                -> create a new issuance request (PENDING status)
+	 * GET    /api/issuance/requests/trainer/{trainerId}    -> get issuance requests for a trainer
+	 * GET    /api/issuance/requests/location?location={loc}   -> get issuance requests filtered by location
+	 * GET    /api/issuance/requests/pending?location={loc}   -> get PENDING issuance requests by location
+	 * GET    /api/issuance/requests/all              -> get all issuance requests
+	 * POST   /api/issuance/approve                -> approve an issuance request (admin)
+	 * POST   /api/issuance/reject                 -> reject an issuance request (admin)
 	 * GET    /api/issuance/issued-items           -> get currently issued items (status=ISSUED)
 	 * PUT    /api/issuance/process-return         -> process a return for an issuance
 	 * GET    /api/issuance/returns                -> get return records (optional query: location, trainerId)
@@ -30,28 +36,68 @@ public class IssuanceController {
 	private IssuanceService issuanceService;
 
 	@PostMapping("/request")
-	// POST /api/issuance/request
+	// POST /api/issuance/request - Create a new issuance request (PENDING)
 	public ResponseEntity<Issuance> createRequest(@RequestBody Issuance issuance) {
 		Issuance created = issuanceService.createIssuanceRequest(issuance);
 		return ResponseEntity.ok(created);
 	}
 
-	@GetMapping("/trainer/{trainerId}")
-	// GET /api/issuance/trainer/{trainerId}
-	public ResponseEntity<List<Issuance>> getRequestsByTrainer(@PathVariable Long trainerId) {
-		return ResponseEntity.ok(issuanceService.getRequestsByTrainer(trainerId));
+	@GetMapping("/requests/trainer/{trainerId}")
+	// GET /api/issuance/requests/trainer/{trainerId}
+	public ResponseEntity<List<IssuanceRequest>> getRequestsByTrainer(@PathVariable Long trainerId) {
+		return ResponseEntity.ok(issuanceService.getIssuanceRequestsByTrainer(trainerId));
 	}
 
-	@GetMapping("/admin")
-	// GET /api/issuance/admin?location={location}
-	public ResponseEntity<List<Issuance>> getRequestsByLocation(@RequestParam String location) {
-		return ResponseEntity.ok(issuanceService.getRequestsByLocation(location));
+	@GetMapping("/requests/location")
+	// GET /api/issuance/requests/location?location={location}
+	public ResponseEntity<List<IssuanceRequest>> getRequestsByLocation(@RequestParam String location) {
+		return ResponseEntity.ok(issuanceService.getAllRequestsByLocation(location));
 	}
 
-	@GetMapping("/admin/all")
-	// GET /api/issuance/admin/all
-	public ResponseEntity<List<Issuance>> getRequestsForAllLocations() {
-		return ResponseEntity.ok(issuanceService.getAllRequests());
+	@GetMapping("/requests/pending")
+	// GET /api/issuance/requests/pending?location={location}
+	public ResponseEntity<List<IssuanceRequest>> getPendingRequestsByLocation(@RequestParam String location) {
+		return ResponseEntity.ok(issuanceService.getPendingRequestsByLocation(location));
+	}
+
+	@GetMapping("/requests/all")
+	// GET /api/issuance/requests/all
+	public ResponseEntity<List<IssuanceRequest>> getAllIssuanceRequests() {
+		return ResponseEntity.ok(issuanceService.getAllIssuanceRequests());
+	}
+
+	@PostMapping("/approve")
+	// POST /api/issuance/approve - Approve an issuance request
+	public ResponseEntity<Issuance> approveIssuanceRequest(@RequestBody ApprovalRequestDto body) {
+		if (body.getRequestId() == null) {
+			return ResponseEntity.badRequest().build();
+		}
+		Issuance approved = issuanceService.approveIssuanceRequest(
+				body.getRequestId(),
+				body.getApprovedBy(),
+				body.getApprovalRemark()
+		);
+		return ResponseEntity.ok(approved);
+	}
+
+	@PostMapping("/reject")
+	// POST /api/issuance/reject - Reject an issuance request
+	public ResponseEntity<String> rejectIssuanceRequest(@RequestBody RejectionRequestDto body) {
+		if (body.getRequestId() == null) {
+			return ResponseEntity.badRequest().build();
+		}
+		issuanceService.rejectIssuanceRequest(
+				body.getRequestId(),
+				body.getRejectedBy(),
+				body.getRejectionReason()
+		);
+		return ResponseEntity.ok("Issuance request rejected successfully");
+	}
+
+	@GetMapping("/issued-items")
+	// GET /api/issuance/issued-items
+	public ResponseEntity<List<Issuance>> getCurrentIssuedItems() {
+		return ResponseEntity.ok(issuanceService.getCurrentIssuedItems());
 	}
 
 	@PutMapping("/process-return")
@@ -61,19 +107,13 @@ public class IssuanceController {
 		return ResponseEntity.ok(updated);
 	}
 
-	@GetMapping("/issued-items")
-	// GET /api/issuance/issued-items
-	public ResponseEntity<List<Issuance>> getCurrentIssuedItems() {
-		return ResponseEntity.ok(issuanceService.getCurrentIssuedItems());
-	}
-
-	    // Return records endpoints
-	    // GET /api/issuance/returns?location={location}&trainerId={trainerId}
-	    // - if both provided -> filtered by both
-	    // - if only location -> filtered by location
-	    // - if only trainerId -> filtered by trainer
-	    // - if none -> all return records
-	    @GetMapping("/returns")
+    // Return records endpoints
+    // GET /api/issuance/returns?location={location}&trainerId={trainerId}
+    // - if both provided -> filtered by both
+    // - if only location -> filtered by location
+    // - if only trainerId -> filtered by trainer
+    // - if none -> all return records
+    @GetMapping("/returns")
 	public ResponseEntity<List<ReturnRecord>> getReturnRecords(
 			@RequestParam(required = false) String location,
 			@RequestParam(required = false) Long trainerId
