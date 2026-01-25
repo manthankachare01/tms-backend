@@ -8,7 +8,8 @@ public class KitCreateRequest {
     private String qualificationLevel;
     private String trainingName;
     private String location;
-    private List<String> toolNos;
+    private List<String> toolNos;  // Deprecated: use toolItems instead
+    private List<ToolItem> toolItems;  // New: specific tools by SI_NO
     private List<KitAggregateRequest> aggregates;
     private String remark;
     private String condition;
@@ -76,5 +77,43 @@ public class KitCreateRequest {
 
     public void setCondition(String condition) {
         this.condition = condition;
+    }
+
+    public List<ToolItem> getToolItems() {
+        return toolItems;
+    }
+
+    public void setToolItems(List<ToolItem> toolItems) {
+        this.toolItems = toolItems;
+    }
+
+    // Inner class for specific tool mapping with SI_NO and location
+    public static class ToolItem {
+        private String siNo;
+        private String location;
+
+        public ToolItem() {
+        }
+
+        public ToolItem(String siNo, String location) {
+            this.siNo = siNo;
+            this.location = location;
+        }
+
+        public String getSiNo() {
+            return siNo;
+        }
+
+        public void setSiNo(String siNo) {
+            this.siNo = siNo;
+        }
+
+        public String getLocation() {
+            return location;
+        }
+
+        public void setLocation(String location) {
+            this.location = location;
+        }
     }
 }

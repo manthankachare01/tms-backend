@@ -16,11 +16,11 @@ Updated the Issuance entity to track all status changes throughout the lifecycle
 │ 1. TRAINER CREATES REQUEST                                      │
 │    POST /api/issuance/request                                   │
 │                                                                 │
-│    Creates TWO records:                                          │
+│    Creates TWO records:                                         │
 │    • Issuance (status: PENDING)    ← Main record                │
 │    • IssuanceRequest (status: PENDING)  ← Tracking record       │
 │                                                                 │
-│    Return: Issuance object with status="PENDING"               │
+│    Return: Issuance object with status="PENDING"                │
 └─────────────────────────────────────────────────────────────────┘
                             ↓
                     ┌───────────────┐
@@ -35,7 +35,7 @@ Updated the Issuance entity to track all status changes throughout the lifecycle
     │ POST /approve        │   │ POST /reject         │
     │                      │   │                      │
     │ Updates Issuance:    │   │ Updates Issuance:    │
-    │ • Status: PENDING→   │   │ • Status: PENDING→  │
+    │ • Status: PENDING→   │   │ • Status: PENDING→   │
     │   ISSUED             │   │   REJECTED           │
     │ • approvedBy         │   │ • approvedBy         │
     │ • approvalDate       │   │ • approvalDate       │

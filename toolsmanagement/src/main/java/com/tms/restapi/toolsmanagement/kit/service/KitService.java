@@ -40,9 +40,29 @@ public class KitService {
             throw new BadRequestException("Kit creation requires a non-empty 'location' field.");
         }
 
-        List<Tool> tools = toolRepository.findByToolNoIn(request.getToolNos());
-
+        List<Tool> tools = new ArrayList<>();
         String loc = request.getLocation().trim();
+
+        // Use new toolItems approach if provided (SI_NO based)
+        if (request.getToolItems() != null && !request.getToolItems().isEmpty()) {
+            for (KitCreateRequest.ToolItem item : request.getToolItems()) {
+                Tool tool = toolRepository.findBySiNoAndLocationIgnoreCaseAndTrim(
+                        item.getSiNo(), 
+                        item.getLocation()
+                );
+                if (tool == null) {
+                    throw new BadRequestException(
+                            "Tool not found with SI_NO: " + item.getSiNo() + 
+                            " at location: " + item.getLocation()
+                    );
+                }
+                tools.add(tool);
+            }
+        } 
+        // Fall back to old toolNos approach if provided
+        else if (request.getToolNos() != null && !request.getToolNos().isEmpty()) {
+            tools = toolRepository.findByToolNoIn(request.getToolNos());
+        }
 
         Kit kit = new Kit();
         kit.setKitId(generateKitId());
@@ -115,8 +135,30 @@ public class KitService {
             }
             // else keep existing location
 
-            // update tools
-            List<Tool> tools = toolRepository.findByToolNoIn(request.getToolNos());
+            // Update tools using new approach or fallback
+            List<Tool> tools = new ArrayList<>();
+            
+            // Use new toolItems approach if provided (SI_NO based)
+            if (request.getToolItems() != null && !request.getToolItems().isEmpty()) {
+                for (KitCreateRequest.ToolItem item : request.getToolItems()) {
+                    Tool tool = toolRepository.findBySiNoAndLocationIgnoreCaseAndTrim(
+                            item.getSiNo(), 
+                            item.getLocation()
+                    );
+                    if (tool == null) {
+                        throw new BadRequestException(
+                                "Tool not found with SI_NO: " + item.getSiNo() + 
+                                " at location: " + item.getLocation()
+                        );
+                    }
+                    tools.add(tool);
+                }
+            } 
+            // Fall back to old toolNos approach if provided
+            else if (request.getToolNos() != null && !request.getToolNos().isEmpty()) {
+                tools = toolRepository.findByToolNoIn(request.getToolNos());
+            }
+
             existing.getTools().clear();
             existing.getTools().addAll(tools);
 
